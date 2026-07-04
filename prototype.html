@@ -1,0 +1,2072 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Navvyata — Kids Apparel</title>
+<style>
+/* ============================================================
+   DESIGN TOKENS → maps to tailwind.config.js theme.extend
+   ============================================================ */
+:root {
+  --coral:#FF6B6B; --coral-l:#FFF0ED; --coral-d:#E05555;
+  --teal:#3DB9AC;  --teal-l:#E0F7F5;  --teal-d:#2A9088;
+  --sun:#FFD93D;   --sun-l:#FFF8D0;   --sun-d:#CC9F00;
+  --purple:#A78BFA;--purple-l:#EDE9FE;--purple-d:#6D28D9;
+  --green:#22C55E; --green-l:#DCFCE7; --green-d:#16A34A;
+  --ink:#1A1A2E;   --ink2:#4A4A6A;    --ink3:#9090A8;
+  --bg:#FFFAF7;    --white:#fff;      --border:#EAEAEA;
+  --radius-sm:10px; --radius:16px; --radius-lg:24px;
+  --shadow:0 4px 20px rgba(0,0,0,.08);
+  --shadow-lg:0 16px 48px rgba(0,0,0,.14);
+  --maxw:1240px;
+  --nav-h:68px;
+  --font:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+}
+
+/* ============================================================
+   RESET
+   ============================================================ */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:var(--font);background:var(--bg);color:var(--ink);-webkit-tap-highlight-color:transparent}
+button,input,select{font-family:inherit}
+a{text-decoration:none;color:inherit}
+
+/* ============================================================
+   UTILITY CLASSES
+   ============================================================ */
+.hidden{display:none!important}
+.pill{display:inline-flex;align-items:center;padding:3px 10px;border-radius:50px;font-size:11px;font-weight:700}
+.p-c{background:var(--coral-l);color:var(--coral-d)}
+.p-t{background:var(--teal-l);color:var(--teal-d)}
+.p-s{background:var(--sun-l);color:var(--sun-d)}
+.p-g{background:var(--green-l);color:var(--green-d)}
+.p-p{background:var(--purple-l);color:var(--purple-d)}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:none;border-radius:50px;font-weight:700;cursor:pointer;transition:all .18s;white-space:nowrap}
+.btn-primary{background:var(--coral);color:#fff;padding:13px 28px;font-size:14px}
+.btn-primary:hover{background:var(--coral-d);transform:translateY(-1px)}
+.btn-outline{background:#fff;color:var(--coral);border:2px solid var(--coral);padding:11px 26px;font-size:14px}
+.btn-outline:hover{background:var(--coral-l)}
+.btn-teal{background:var(--teal);color:#fff;padding:13px 28px;font-size:14px}
+.btn-teal:hover{background:var(--teal-d)}
+.btn-dark{background:var(--ink);color:#fff;padding:13px 28px;font-size:14px}
+.btn-sm{padding:8px 16px!important;font-size:12px!important}
+.btn-full{width:100%}
+
+/* FORM */
+.inp{width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:14px;outline:none;background:#fff;transition:border-color .18s}
+.inp:focus{border-color:var(--coral)}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:12px;font-weight:700;color:var(--ink2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px}
+
+/* CHIP / SIZE SELECTOR */
+.chip{padding:7px 14px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-weight:600;cursor:pointer;background:#fff;color:var(--ink);transition:all .15s;display:inline-block}
+.chip:hover{border-color:var(--coral);color:var(--coral)}
+.chip.on{background:var(--coral);color:#fff;border-color:var(--coral)}
+
+/* CARDS */
+.card{background:#fff;border-radius:var(--radius);border:1px solid var(--border)}
+
+/* DIVIDER */
+.divider{height:1px;background:var(--border)}
+.spacer{height:8px;background:var(--bg)}
+
+/* ============================================================
+   COMPONENT: Toast
+   ============================================================ */
+#toast{
+  position:fixed;z-index:9999;
+  background:var(--ink);color:#fff;
+  border-radius:var(--radius);padding:13px 18px;
+  font-size:13px;font-weight:600;
+  display:flex;align-items:center;gap:10px;
+  box-shadow:var(--shadow-lg);
+  opacity:0;pointer-events:none;
+  transition:all .28s cubic-bezier(.34,1.56,.64,1);
+  /* mobile: bottom center */
+  bottom:80px;left:50%;transform:translateX(-50%) translateY(16px);
+  width:calc(100% - 32px);max-width:360px;
+}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+@media(min-width:768px){
+  #toast{bottom:32px;left:auto;right:32px;transform:translateY(16px);width:auto;max-width:380px}
+  #toast.show{transform:translateY(0)}
+}
+
+/* ============================================================
+   COMPONENT: Overlay + Drawers (shared)
+   ============================================================ */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:400;display:none;align-items:flex-end}
+.overlay.open{display:flex}
+
+/* Mobile: bottom sheet */
+.sheet{background:#fff;border-radius:24px 24px 0 0;width:100%;padding:16px 18px 28px;max-height:88vh;overflow-y:auto}
+.sheet-handle{width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 14px}
+
+/* Desktop: right panel (cart drawer) */
+@media(min-width:768px){
+  .overlay.right-panel{align-items:stretch;justify-content:flex-end}
+  .overlay.right-panel .sheet{border-radius:0;width:420px;min-height:100vh;max-height:100vh;padding:28px}
+  .overlay.right-panel .sheet-handle{display:none}
+}
+
+/* ============================================================
+   PAGE SYSTEM
+   ============================================================ */
+.page{display:none}
+.page.active{display:block}
+
+/* ============================================================
+   COMPONENT: Announcement Bar
+   ============================================================ */
+#ann-bar{background:var(--ink);color:rgba(255,255,255,.85);text-align:center;padding:8px 16px;font-size:12px;font-weight:500;flex-shrink:0}
+#ann-bar span{color:var(--sun);font-weight:700}
+
+/* ============================================================
+   COMPONENT: Navbar
+   ============================================================ */
+#navbar{
+  background:#fff;border-bottom:1px solid var(--border);
+  position:sticky;top:0;z-index:200;
+}
+.nav-inner{max-width:var(--maxw);margin:0 auto;padding:0 20px;display:flex;align-items:center;gap:16px;height:var(--nav-h)}
+.nav-logo{font-size:20px;font-weight:900;color:var(--coral);cursor:pointer;flex-shrink:0;letter-spacing:-.5px}
+.nav-logo em{color:var(--teal-d);font-style:normal}
+
+/* Mobile nav: just logo + icons */
+.nav-links{display:none}
+.nav-search-wrap{display:none}
+
+/* Nav icons (visible on all) */
+.nav-actions{display:flex;align-items:center;gap:4px;margin-left:auto}
+.nav-ic{width:38px;height:38px;border-radius:50%;background:none;border:none;cursor:pointer;font-size:17px;display:flex;align-items:center;justify-content:center;position:relative;transition:background .15s}
+.nav-ic:hover{background:var(--coral-l)}
+.nav-bdg{position:absolute;top:1px;right:1px;background:var(--coral);color:#fff;border-radius:10px;font-size:8px;padding:1px 4px;font-weight:700;min-width:14px;text-align:center;display:none}
+
+/* Desktop nav expansions */
+@media(min-width:1024px){
+  .nav-inner{gap:32px;padding:0 32px}
+  .nav-logo{font-size:22px}
+  .nav-links{display:flex;gap:24px}
+  .nav-links a{font-size:14px;font-weight:600;color:var(--ink2);cursor:pointer;position:relative;padding:4px 0;transition:color .15s}
+  .nav-links a:hover,.nav-links a.active{color:var(--coral)}
+  .nav-links a.active::after{content:'';position:absolute;bottom:-22px;left:0;right:0;height:3px;background:var(--coral);border-radius:2px}
+  .nav-search-wrap{display:flex;flex:1;max-width:320px;position:relative}
+  .nav-search-wrap input{width:100%;padding:9px 14px 9px 36px;border:1.5px solid var(--border);border-radius:50px;font-size:13px;outline:none;background:var(--bg);transition:border-color .15s}
+  .nav-search-wrap input:focus{border-color:var(--coral);background:#fff}
+  .nav-search-wrap .sico{position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:14px;pointer-events:none}
+  .nav-actions{margin-left:0}
+  .nav-ic{width:40px;height:40px;font-size:18px}
+}
+
+/* ============================================================
+   COMPONENT: Bottom Nav (mobile only)
+   ============================================================ */
+#bottom-nav{
+  position:fixed;bottom:0;left:0;right:0;z-index:200;
+  background:#fff;border-top:1px solid var(--border);
+  display:grid;grid-template-columns:repeat(5,1fr);
+  padding:6px 0 10px;
+}
+.bni{display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;padding:3px 0;position:relative}
+.bni .bi{font-size:20px}
+.bni .bl{font-size:9px;font-weight:600;color:var(--ink3)}
+.bni.on .bl{color:var(--coral)}
+@media(min-width:768px){#bottom-nav{display:none}}
+
+/* ============================================================
+   COMPONENT: ProductCard
+   ============================================================ */
+.pcard{background:#fff;border-radius:var(--radius);border:1px solid var(--border);overflow:hidden;cursor:pointer;transition:transform .2s,box-shadow .2s}
+.pcard:hover{transform:translateY(-4px);box-shadow:var(--shadow-lg)}
+.pcard:hover .pcard-hover-btn{opacity:1;transform:translateY(0)}
+.pimg{position:relative;display:flex;align-items:center;justify-content:center;font-size:52px}
+.pimg-inner{width:100%;aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:52px}
+.pcard-pill{position:absolute;top:10px;left:10px;font-size:10px;padding:3px 9px}
+.pcard-wish{position:absolute;top:10px;right:10px;width:30px;height:30px;background:#fff;border:none;border-radius:50%;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,.1);transition:all .15s}
+.pcard-wish:hover{background:var(--coral-l)}
+.pcard-hover-btn{position:absolute;bottom:10px;left:10px;right:10px;background:var(--ink);color:#fff;border:none;border-radius:50px;padding:10px;font-size:12px;font-weight:700;cursor:pointer;opacity:0;transform:translateY(8px);transition:all .2s;display:none}
+.pbody{padding:14px}
+.pcard-name{font-size:13px;font-weight:700;color:var(--ink);margin-bottom:2px;line-height:1.3}
+.pcard-age{font-size:11px;color:var(--ink3);margin-bottom:8px}
+.pcard-foot{display:flex;align-items:center;justify-content:space-between}
+.pcard-price{font-size:16px;font-weight:800;color:var(--coral)}
+.pcard-old{font-size:11px;color:var(--ink3);text-decoration:line-through;margin-left:4px}
+.pcard-stars{font-size:11px;color:var(--sun-d)}
+/* Quick add button shown only on desktop */
+@media(min-width:1024px){
+  .pcard-hover-btn{display:block}
+  .pimg-inner{font-size:72px}
+}
+/* Grid responsive */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:20px}
+@media(max-width:1023px){.grid-4{grid-template-columns:repeat(3,1fr);gap:16px}}
+@media(max-width:767px){.grid-4,.grid-3{grid-template-columns:1fr 1fr;gap:10px}}
+
+/* ============================================================
+   COMPONENT: Section wrapper
+   ============================================================ */
+.section{max-width:var(--maxw);margin:0 auto;padding:40px 18px}
+@media(min-width:768px){.section{padding:56px 28px}}
+@media(min-width:1024px){.section{padding:64px 32px}}
+.sec-head{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:24px}
+.sec-title{font-size:22px;font-weight:900;letter-spacing:-.4px;color:var(--ink)}
+.sec-sub{font-size:13px;color:var(--ink3);margin-top:4px}
+.sec-link{font-size:13px;font-weight:700;color:var(--teal-d);cursor:pointer;white-space:nowrap}
+@media(min-width:768px){.sec-title{font-size:28px}}
+@media(min-width:1024px){.sec-title{font-size:32px}.sec-head{margin-bottom:32px}}
+
+/* ============================================================
+   PAGE: Splash
+   ============================================================ */
+#s-splash{background:var(--coral);min-height:100vh;align-items:center;justify-content:center;padding:28px 20px}
+#s-splash.active{display:flex!important}
+.splash-box{text-align:center;width:100%;max-width:400px}
+.splash-age-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px}
+.splash-age-card{background:#fff;border-radius:var(--radius);padding:16px 8px;cursor:pointer;text-align:center;transition:transform .15s}
+.splash-age-card:hover{transform:translateY(-3px)}
+
+/* ============================================================
+   PAGE: Home
+   ============================================================ */
+/* Hero */
+.hero{background:linear-gradient(135deg,#FFF0ED 0%,#E8F8F6 55%,#FFF8D0 100%)}
+.hero-inner{max-width:var(--maxw);margin:0 auto;padding:40px 18px 48px}
+.hero-title{font-size:32px;font-weight:900;line-height:1.1;letter-spacing:-1px;color:var(--ink);margin-bottom:14px}
+.hero-title em{color:var(--coral);font-style:normal}
+.hero-sub{font-size:14px;color:var(--ink2);line-height:1.65;margin-bottom:20px}
+.hero-ctas{display:flex;gap:10px;flex-wrap:wrap}
+.hero-visual{display:none}
+@media(min-width:768px){
+  .hero-inner{padding:56px 28px}
+  .hero-title{font-size:44px}
+}
+@media(min-width:1024px){
+  .hero-inner{padding:80px 32px;display:grid;grid-template-columns:1.15fr 1fr;gap:64px;align-items:center}
+  .hero-title{font-size:56px;margin-bottom:18px}
+  .hero-sub{font-size:17px;margin-bottom:28px;max-width:460px}
+  .hero-visual{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  .hero-card{background:#fff;border-radius:var(--radius-lg);padding:22px;text-align:center;box-shadow:var(--shadow-lg);cursor:pointer;transition:transform .2s}
+  .hero-card:hover{transform:translateY(-5px)}
+  .hero-card:nth-child(2){margin-top:32px}
+  .hero-card:nth-child(3){margin-top:-32px}
+}
+
+/* Trust strip */
+.trust-strip{background:var(--ink);padding:16px 18px}
+.trust-inner{max-width:var(--maxw);margin:0 auto;display:flex;gap:16px;overflow-x:auto;padding-bottom:2px}
+.trust-item{display:flex;align-items:center;gap:10px;color:#fff;flex-shrink:0}
+.trust-item .ti{font-size:22px}
+.trust-item .tt{font-size:12px;font-weight:700}
+.trust-item .td{font-size:10px;color:rgba(255,255,255,.6)}
+@media(min-width:768px){.trust-inner{display:grid;grid-template-columns:repeat(4,1fr);overflow:visible}}
+@media(min-width:1024px){.trust-strip{padding:22px 32px}.trust-item .ti{font-size:28px}.trust-item .tt{font-size:14px}.trust-item .td{font-size:12px}}
+
+/* Age grid */
+.age-grid{display:flex;gap:10px;overflow-x:auto;padding-bottom:4px}
+.age-card{flex:0 0 88px;border-radius:var(--radius);padding:14px 8px;text-align:center;cursor:pointer;transition:transform .2s}
+.age-card:hover{transform:translateY(-4px)}
+.age-card .ai{font-size:28px}
+.age-card .al{font-size:11px;font-weight:800;margin-top:6px}
+.age-card .ar{font-size:9px;opacity:.7;margin-top:1px}
+@media(min-width:768px){
+  .age-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;overflow:visible}
+  .age-card{flex:unset;padding:28px 16px}
+  .age-card .ai{font-size:44px}
+  .age-card .al{font-size:16px}
+  .age-card .ar{font-size:12px}
+}
+
+/* Promo banner */
+.promo-banner{padding:0 18px;margin-bottom:40px}
+.promo-inner{background:linear-gradient(120deg,var(--coral),#FF8E53);border-radius:var(--radius-lg);padding:28px 24px;display:flex;align-items:center;justify-content:space-between;color:#fff}
+.promo-title{font-size:20px;font-weight:900;margin-bottom:12px;letter-spacing:-.5px}
+.promo-emojis{font-size:48px}
+@media(min-width:768px){.promo-banner{padding:0 28px}.promo-inner{padding:40px 48px}.promo-title{font-size:30px}.promo-emojis{font-size:72px}}
+@media(min-width:1024px){.promo-banner{max-width:var(--maxw);margin-left:auto;margin-right:auto;padding:0 32px}.promo-inner{padding:52px 64px}.promo-title{font-size:38px}}
+
+/* Blog grid */
+.blog-grid{display:flex;flex-direction:column;gap:12px}
+.bcard{background:#fff;border-radius:var(--radius);border:1px solid var(--border);overflow:hidden;cursor:pointer;transition:transform .2s}
+.bcard:hover{transform:translateY(-3px)}
+.bcard-img{display:flex;align-items:center;justify-content:center;font-size:40px}
+.bcard-body{padding:14px}
+.bcard-tag{font-size:10px;font-weight:700;color:var(--teal-d);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px}
+.bcard-title{font-size:14px;font-weight:800;color:var(--ink);line-height:1.35;margin-bottom:5px}
+.bcard-meta{font-size:11px;color:var(--ink3)}
+@media(min-width:768px){
+  .blog-grid{display:grid;grid-template-columns:1.3fr 1fr 1fr;gap:20px}
+  .bcard-img{height:180px;font-size:56px}
+  .bcard-title{font-size:16px}
+  .bcard.featured .bcard-img{height:260px;font-size:72px}
+  .bcard.featured .bcard-title{font-size:22px}
+  .bcard.featured .bcard-body{padding:20px}
+}
+
+/* Newsletter */
+.newsletter{background:linear-gradient(120deg,var(--teal-l),var(--purple-l));border-radius:var(--radius-lg);padding:28px 20px;text-align:center;margin:0 18px 40px}
+.nl-title{font-size:18px;font-weight:900;color:var(--ink);margin-bottom:6px}
+.nl-sub{font-size:12px;color:var(--ink2);margin-bottom:16px}
+.nl-form{display:flex;gap:8px;max-width:400px;margin:0 auto}
+@media(min-width:768px){.newsletter{padding:40px 32px;margin:0 28px 56px}.nl-title{font-size:24px}}
+@media(min-width:1024px){.newsletter{max-width:var(--maxw);margin-left:auto;margin-right:auto;padding:48px 64px}}
+
+/* ============================================================
+   PAGE: PLP
+   ============================================================ */
+.plp-head{background:#fff;border-bottom:1px solid var(--border);padding:20px 18px}
+.plp-head-inner{max-width:var(--maxw);margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.breadcrumb{font-size:12px;color:var(--ink3);margin-bottom:6px}
+.breadcrumb span{color:var(--coral);cursor:pointer;font-weight:600}
+.plp-title-text{font-size:20px;font-weight:900;color:var(--ink)}
+.plp-count{font-size:12px;color:var(--ink3);margin-top:2px}
+.sort-btn{padding:9px 14px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:12px;background:#fff;cursor:pointer;font-weight:600;color:var(--ink2);white-space:nowrap}
+.filter-bar{padding:10px 18px;border-bottom:1px solid var(--border);display:flex;gap:8px;overflow-x:auto;background:#fff}
+
+/* PLP body: mobile = stacked, desktop = sidebar + grid */
+.plp-body{max-width:var(--maxw);margin:0 auto;padding:20px 18px}
+.plp-sidebar{display:none}
+.plp-grid-wrap{flex:1}
+@media(min-width:1024px){
+  .plp-head{padding:24px 32px}
+  .plp-title-text{font-size:28px}
+  .filter-bar{display:none}
+  .plp-body{display:flex;gap:36px;padding:28px 32px}
+  .plp-sidebar{display:block;width:240px;flex-shrink:0;position:sticky;top:calc(var(--nav-h) + 16px);align-self:start}
+  .filter-group{padding-bottom:22px;margin-bottom:22px;border-bottom:1px solid var(--border)}
+  .filter-group:last-child{border:none}
+  .filter-label{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--ink);margin-bottom:12px}
+  .filter-opt{display:flex;align-items:center;gap:8px;margin-bottom:9px;cursor:pointer;font-size:13px;color:var(--ink2)}
+  .filter-opt input{accent-color:var(--coral);width:15px;height:15px;cursor:pointer}
+  .color-dots{display:flex;flex-wrap:wrap;gap:9px}
+  .cdot{width:26px;height:26px;border-radius:50%;cursor:pointer;border:2.5px solid transparent;transition:all .15s}
+  .cdot:hover,.cdot.on{border-color:var(--ink);transform:scale(1.1)}
+  .size-pills{display:flex;flex-wrap:wrap;gap:6px}
+}
+
+/* ============================================================
+   PAGE: PDP
+   ============================================================ */
+.pdp-wrap{max-width:var(--maxw);margin:0 auto;padding:20px 18px 40px}
+/* Mobile: stacked */
+.pdp-gallery{margin-bottom:16px}
+.pdp-main-img{border-radius:var(--radius-lg);display:flex;align-items:center;justify-content:center;font-size:120px;transition:background .3s;aspect-ratio:1;max-height:320px}
+.pdp-thumbs{display:flex;gap:8px;margin-top:10px}
+.pdp-thumb{width:60px;height:60px;border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;font-size:24px;cursor:pointer;border:2px solid transparent;transition:border-color .15s}
+.pdp-thumb.on{border-color:var(--coral)}
+.pdp-name{font-size:22px;font-weight:900;color:var(--ink);line-height:1.2;margin-bottom:10px}
+.pdp-rating{display:flex;align-items:center;gap:8px;margin-bottom:16px}
+.pdp-price-row{display:flex;align-items:baseline;gap:10px;margin-bottom:20px;padding-bottom:20px;border-bottom:1px solid var(--border)}
+.pdp-price{font-size:28px;font-weight:900;color:var(--coral)}
+.pdp-old{font-size:15px;color:var(--ink3);text-decoration:line-through}
+.pdp-section{margin-top:20px}
+.pdp-section-label{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--ink);margin-bottom:10px;display:flex;justify-content:space-between;align-items:center}
+.pdp-size-row{display:flex;gap:8px;flex-wrap:wrap}
+.pdp-size{padding:9px 16px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-weight:700;cursor:pointer;transition:all .15s}
+.pdp-size:hover,.pdp-size.on{background:var(--coral);color:#fff;border-color:var(--coral)}
+.pdp-colors{display:flex;gap:10px}
+.pdp-color{width:32px;height:32px;border-radius:50%;cursor:pointer;border:2.5px solid transparent;transition:all .15s}
+.pdp-color:hover,.pdp-color.on{border-color:var(--ink);transform:scale(1.1)}
+.pdp-qty{display:flex;align-items:center;gap:14px}
+.pdp-qty-btn{width:36px;height:36px;border-radius:50%;border:1.5px solid var(--border);background:#fff;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.pdp-qty-btn:hover{border-color:var(--coral);background:var(--coral-l)}
+.pdp-features{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:16px}
+.pdp-feat{background:var(--bg);border-radius:var(--radius-sm);padding:10px 12px;font-size:12px;color:var(--ink2);display:flex;align-items:center;gap:7px;font-weight:600}
+.pdp-ctas{display:flex;gap:10px;margin-top:20px;position:sticky;bottom:62px;background:#fff;padding:12px 0;border-top:1px solid var(--border)}
+.pdp-wish-btn{width:46px;height:46px;border:1.5px solid var(--border);border-radius:var(--radius-sm);background:#fff;font-size:20px;cursor:pointer;flex-shrink:0;transition:all .15s}
+.pdp-wish-btn:hover{border-color:var(--coral);background:var(--coral-l)}
+/* Desktop: 2-col */
+@media(min-width:1024px){
+  .pdp-wrap{display:grid;grid-template-columns:1fr 1fr;gap:64px;padding:40px 32px 64px;align-items:start}
+  .pdp-gallery{margin-bottom:0;position:sticky;top:calc(var(--nav-h) + 20px)}
+  .pdp-main-img{font-size:200px;max-height:none}
+  .pdp-thumbs{gap:12px;margin-top:14px}
+  .pdp-thumb{width:80px;height:80px;font-size:34px}
+  .pdp-name{font-size:34px}
+  .pdp-price{font-size:36px}
+  .pdp-ctas{position:static;border-top:none;padding:0;margin-top:28px}
+  .pdp-ctas .btn-primary{flex:1}
+}
+
+/* Complete the look */
+.look-grid{display:flex;gap:12px;overflow-x:auto;padding-bottom:4px}
+.look-card{flex:0 0 100px;text-align:center;cursor:pointer}
+.look-img{width:100px;height:100px;border-radius:var(--radius);display:flex;align-items:center;justify-content:center;font-size:38px;margin-bottom:8px;transition:transform .2s}
+.look-card:hover .look-img{transform:translateY(-3px)}
+@media(min-width:768px){
+  .look-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;overflow:visible;padding-bottom:0}
+  .look-card{flex:unset}
+  .look-img{width:100%;height:auto;aspect-ratio:1;font-size:52px}
+}
+
+/* Reviews */
+.review-grid{display:flex;flex-direction:column;gap:12px}
+.review-card{background:#fff;border-radius:var(--radius);border:1px solid var(--border);padding:18px}
+.review-top{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.review-avatar{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0}
+@media(min-width:768px){.review-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}}
+
+/* ============================================================
+   PAGE: Cart
+   ============================================================ */
+.cart-wrap{max-width:var(--maxw);margin:0 auto;padding:20px 18px 80px}
+.cart-item{background:#fff;border-radius:var(--radius);border:1px solid var(--border);padding:14px;display:flex;gap:12px;align-items:flex-start;margin-bottom:12px}
+.cart-item-img{width:72px;height:72px;border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;font-size:32px;flex-shrink:0}
+.cart-qty-row{display:flex;align-items:center;gap:10px;background:var(--bg);border-radius:50px;padding:4px 12px;width:fit-content;margin-top:8px}
+.cqb{background:none;border:none;font-size:17px;cursor:pointer;color:var(--ink2);line-height:1}
+.order-summary-box{background:#fff;border-radius:var(--radius);border:1px solid var(--border);padding:20px}
+@media(min-width:1024px){
+  .cart-wrap{display:grid;grid-template-columns:1fr 380px;gap:40px;padding:40px 32px}
+  .cart-item-img{width:100px;height:100px;font-size:46px}
+  .cart-item{padding:20px;gap:18px}
+}
+
+/* ============================================================
+   PAGE: Checkout
+   ============================================================ */
+.checkout-wrap{max-width:1000px;margin:0 auto;padding:20px 18px 80px}
+.step-row{display:flex;align-items:center;margin-bottom:28px}
+.step-dot{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0}
+.step-dot.done{background:var(--coral);color:#fff}
+.step-dot.act{background:var(--coral);color:#fff;outline:3px solid var(--coral-l)}
+.step-dot.todo{background:var(--border);color:var(--ink3)}
+.step-line{flex:1;height:2px;background:var(--border)}
+.step-line.done{background:var(--coral)}
+.addr-card{border:2px solid var(--border);border-radius:var(--radius);padding:16px;cursor:pointer;margin-bottom:12px;transition:all .15s}
+.addr-card.on{border-color:var(--coral);background:var(--coral-l)}
+.pay-method{border:2px solid var(--border);border-radius:var(--radius);padding:16px 18px;cursor:pointer;display:flex;align-items:center;gap:14px;margin-bottom:12px;transition:all .15s;background:#fff}
+.pay-method.on{border-color:var(--coral);background:var(--coral-l)}
+.pay-icon{width:40px;height:40px;background:#fff;border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+@media(min-width:1024px){
+  .checkout-wrap{display:grid;grid-template-columns:1fr 360px;gap:40px;max-width:1040px;padding:40px 32px}
+  .checkout-form-col{padding-right:0}
+}
+
+/* ============================================================
+   PAGE: Account / misc
+   ============================================================ */
+.account-wrap{max-width:860px;margin:0 auto;padding:20px 18px 80px}
+@media(min-width:768px){.account-wrap{padding:40px 32px}}
+.menu-list{background:#fff;border-radius:var(--radius);border:1px solid var(--border);overflow:hidden}
+.menu-row{display:flex;align-items:center;gap:12px;padding:15px 18px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s}
+.menu-row:last-child{border-bottom:none}
+.menu-row:hover{background:var(--bg)}
+
+/* ============================================================
+   PAGE: Tracking timeline
+   ============================================================ */
+.track-step{display:flex;gap:14px;margin-bottom:0}
+.track-dot{width:14px;height:14px;border-radius:50%;flex-shrink:0;margin-top:3px}
+.track-line-v{width:2px;flex:1;background:var(--border);margin:3px 0;min-height:32px}
+.track-line-v.done{background:var(--coral)}
+
+/* ============================================================
+   PAGE: Blog
+   ============================================================ */
+.blog-list{display:flex;flex-direction:column;gap:12px}
+@media(min-width:768px){.blog-list{display:grid;grid-template-columns:1.3fr 1fr 1fr;gap:20px}}
+
+/* ============================================================
+   FOOTER (desktop only)
+   ============================================================ */
+#footer{display:none}
+@media(min-width:768px){
+  #footer{display:block;background:var(--ink);color:rgba(255,255,255,.7);padding:56px 32px 24px}
+  .footer-inner{max-width:var(--maxw);margin:0 auto}
+  .footer-grid{display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr;gap:36px;margin-bottom:40px}
+  .footer-logo{font-size:20px;font-weight:900;color:#fff;margin-bottom:12px}
+  .footer-logo em{color:var(--teal);font-style:normal}
+  .footer-col h4{font-size:11px;font-weight:700;color:#fff;text-transform:uppercase;letter-spacing:.6px;margin-bottom:14px}
+  .footer-col a{display:block;font-size:13px;margin-bottom:10px;cursor:pointer;transition:color .15s;color:rgba(255,255,255,.65)}
+  .footer-col a:hover{color:var(--coral)}
+  .footer-bottom{border-top:1px solid rgba(255,255,255,.1);padding-top:20px;display:flex;justify-content:space-between;align-items:center;font-size:12px}
+  .footer-badges{display:flex;gap:8px}
+  .fbadge{padding:4px 10px;background:rgba(255,255,255,.08);border-radius:7px;font-size:11px;font-weight:600}
+}
+
+/* Page body padding for mobile bottom nav */
+.page-body{padding-bottom:70px}
+@media(min-width:768px){.page-body{padding-bottom:0}}
+</style>
+</head>
+<body>
+
+<!-- ============================================================
+     COMPONENT: Toast
+     ============================================================ -->
+<div id="toast"><span id="tmsg">Done!</span></div>
+
+<!-- ============================================================
+     COMPONENT: Cart Drawer (bottom sheet mobile / right panel desktop)
+     ============================================================ -->
+<div class="overlay right-panel" id="cdrawer" onclick="closeCD()">
+  <div class="sheet" onclick="event.stopPropagation()">
+    <div class="sheet-handle"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
+      <div style="font-size:16px;font-weight:800;color:var(--ink)">Added to cart 🛍️</div>
+      <button onclick="closeCD()" style="background:none;border:none;font-size:24px;cursor:pointer;color:var(--ink3);line-height:1">×</button>
+    </div>
+    <div style="background:var(--bg);border-radius:var(--radius);padding:14px;display:flex;gap:14px;align-items:center;margin-bottom:14px">
+      <div id="dimg" style="width:64px;height:64px;border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0;background:var(--coral-l)">🦁</div>
+      <div>
+        <div id="dname" style="font-size:14px;font-weight:700;color:var(--ink)">Item</div>
+        <div id="dmeta" style="font-size:12px;color:var(--ink3);margin:2px 0 4px">Size · Color</div>
+        <div id="dprice" style="font-size:16px;font-weight:800;color:var(--coral)">₹0</div>
+      </div>
+    </div>
+    <div id="dship" style="background:var(--teal-l);border-radius:var(--radius-sm);padding:10px 13px;font-size:12px;color:var(--teal-d);font-weight:600;margin-bottom:16px">🚚 Free shipping above ₹999</div>
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-outline btn-sm" style="flex:1" onclick="closeCD()">Continue shopping</button>
+      <button class="btn btn-primary btn-sm" style="flex:1" onclick="closeCD();go('s-cart')">Go to cart →</button>
+    </div>
+    <div style="margin-top:24px;padding-top:20px;border-top:1px solid var(--border)">
+      <div style="font-size:12px;font-weight:700;color:var(--ink);margin-bottom:12px">You might also like</div>
+      <div id="drawer-upsell"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     COMPONENT: Filter Drawer (mobile)
+     ============================================================ -->
+<div class="overlay" id="fdrawer" onclick="this.classList.remove('open')">
+  <div class="sheet" onclick="event.stopPropagation()">
+    <div class="sheet-handle"></div>
+    <div style="display:flex;justify-content:space-between;margin-bottom:16px">
+      <div style="font-size:16px;font-weight:800">Filter &amp; sort</div>
+      <button onclick="document.getElementById('fdrawer').classList.remove('open')" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--ink3)">×</button>
+    </div>
+    <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--ink);margin-bottom:10px">Age group</div>
+    <div style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:16px">
+      <div class="chip on">Baby (0–12m)</div><div class="chip">Toddler (1–3y)</div><div class="chip">Kids (4–10y)</div><div class="chip">Tweens (11–14y)</div>
+    </div>
+    <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--ink);margin-bottom:10px">Price range</div>
+    <div style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:16px">
+      <div class="chip">Under ₹500</div><div class="chip on">₹500–₹1000</div><div class="chip">₹1000+</div>
+    </div>
+    <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--ink);margin-bottom:10px">Sort by</div>
+    <div style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:20px">
+      <div class="chip on">Featured</div><div class="chip">Price: Low</div><div class="chip">Price: High</div><div class="chip">Newest</div>
+    </div>
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-outline" style="flex:1;padding:11px" onclick="document.getElementById('fdrawer').classList.remove('open')">Clear</button>
+      <button class="btn btn-primary" style="flex:2;padding:11px" onclick="document.getElementById('fdrawer').classList.remove('open');showToast('✅ Filters applied!')">Apply filters</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     COMPONENT: Announcement Bar
+     ============================================================ -->
+<div id="ann-bar">🎉 Free shipping above <span>₹999</span> · Code <span>NAVVY20</span> for 20% off · Ends in <span id="timer">02:14:33</span></div>
+
+<!-- ============================================================
+     COMPONENT: Navbar
+     ============================================================ -->
+<nav id="navbar">
+  <div class="nav-inner">
+    <div class="nav-logo" onclick="go('s-home')">navvy<em>ata</em></div>
+    <div class="nav-links" id="nav-links">
+      <a id="nl-home" class="active" onclick="go('s-home')">Home</a>
+      <a id="nl-shop" onclick="go('s-plp')">Shop all</a>
+      <a id="nl-new" onclick="go('s-new-arrivals')">New arrivals</a>
+      <a id="nl-sale" onclick="go('s-sale')">Sale</a>
+      <a id="nl-blog" onclick="go('s-blog')">Blog</a>
+      <a id="nl-about" onclick="go('s-about')">About</a>
+    </div>
+    <div class="nav-search-wrap">
+      <span class="sico">🔍</span>
+      <input id="sinp" placeholder="Search clothes, brands…" oninput="liveSearch(this.value)" onfocus="if(this.value)go('s-search')">
+    </div>
+    <div class="nav-actions">
+      <button class="nav-ic" onclick="go('s-search')" title="Search" id="mob-search-btn">🔍</button>
+      <button class="nav-ic" onclick="go('s-wishlist')" title="Wishlist">🤍</button>
+      <button class="nav-ic" onclick="go('s-account')" title="Account">👤</button>
+      <button class="nav-ic" onclick="go('s-cart')" title="Cart" style="position:relative">🛍️<span class="nav-bdg" id="navbadge">0</span></button>
+    </div>
+  </div>
+</nav>
+<!-- hide mobile search icon on desktop -->
+<style>@media(min-width:1024px){#mob-search-btn{display:none}}</style>
+
+
+<!-- ============================================================
+     PAGE: Splash
+     ============================================================ -->
+<div class="page" id="s-splash">
+<div id="s-splash-inner" style="background:var(--coral);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:28px 20px">
+  <div class="splash-box">
+    <div style="font-size:52px;margin-bottom:14px">👕</div>
+    <div style="font-size:30px;font-weight:900;color:#fff;letter-spacing:-1px;margin-bottom:4px">navvyata</div>
+    <div style="font-size:13px;color:rgba(255,255,255,.75);margin-bottom:28px">newness for little ones</div>
+    <div style="background:rgba(255,255,255,.15);border-radius:var(--radius-lg);padding:18px;margin-bottom:18px">
+      <div style="font-size:14px;color:#fff;font-weight:700;margin-bottom:13px">Who are you shopping for?</div>
+      <div class="splash-age-grid">
+        <div class="splash-age-card" onclick="go('s-home')"><div style="font-size:26px">🍼</div><div style="font-size:12px;font-weight:700;color:var(--ink);margin-top:6px">Baby</div><div style="font-size:10px;color:var(--ink3)">0–12m</div></div>
+        <div class="splash-age-card" onclick="go('s-home')"><div style="font-size:26px">🐣</div><div style="font-size:12px;font-weight:700;color:var(--ink);margin-top:6px">Toddler</div><div style="font-size:10px;color:var(--ink3)">1–3y</div></div>
+        <div class="splash-age-card" onclick="go('s-home')"><div style="font-size:26px">🌈</div><div style="font-size:12px;font-weight:700;color:var(--ink);margin-top:6px">Kids</div><div style="font-size:10px;color:var(--ink3)">4–10y</div></div>
+        <div class="splash-age-card" onclick="go('s-home')"><div style="font-size:26px">🎒</div><div style="font-size:12px;font-weight:700;color:var(--ink);margin-top:6px">Tweens</div><div style="font-size:10px;color:var(--ink3)">11–14y</div></div>
+      </div>
+    </div>
+    <button onclick="go('s-home')" class="btn btn-full" style="background:#fff;color:var(--coral);padding:14px;font-size:14px;font-weight:800;border-radius:50px">Explore all →</button>
+    <div onclick="go('s-home')" style="font-size:12px;color:rgba(255,255,255,.5);margin-top:12px;cursor:pointer">Skip</div>
+  </div>
+</div>
+</div>
+
+<!-- ============================================================
+     PAGE: Home
+     ============================================================ -->
+<div class="page" id="s-home">
+  <!-- COMPONENT: Hero -->
+  <div class="hero">
+    <div class="hero-inner">
+      <div>
+        <span style="display:inline-block;background:#fff;color:var(--coral-d);font-size:12px;font-weight:700;padding:7px 16px;border-radius:50px;margin-bottom:18px">✨ Summer '25 Collection is here</span>
+        <h1 class="hero-title">Clothes that let<br>kids be <em>kids</em></h1>
+        <p class="hero-sub">Fun, comfy and durable styles for every adventure — from newborns to tweens. Ages 0–14 yrs, designed for play.</p>
+        <div class="hero-ctas">
+          <button class="btn btn-primary" onclick="go('s-plp')">Shop now →</button>
+          <button class="btn btn-outline" onclick="go('s-sale')">Sale 🔥</button>
+        </div>
+      </div>
+      <div class="hero-visual">
+        <div class="hero-card" onclick="go('s-pdp')"><div style="font-size:44px;margin-bottom:10px">👕</div><div style="font-size:13px;font-weight:700;color:var(--ink2)">Graphic Tees</div><div style="font-size:15px;font-weight:800;color:var(--coral);margin-top:2px">From ₹399</div></div>
+        <div class="hero-card" onclick="go('s-pdp')"><div style="font-size:44px;margin-bottom:10px">🦋</div><div style="font-size:13px;font-weight:700;color:var(--ink2)">Summer Dresses</div><div style="font-size:15px;font-weight:800;color:var(--coral);margin-top:2px">From ₹699</div></div>
+        <div class="hero-card" onclick="go('s-pdp')"><div style="font-size:44px;margin-bottom:10px">🚀</div><div style="font-size:13px;font-weight:700;color:var(--ink2)">Play Sets</div><div style="font-size:15px;font-weight:800;color:var(--coral);margin-top:2px">From ₹899</div></div>
+        <div class="hero-card" onclick="go('s-pdp')"><div style="font-size:44px;margin-bottom:10px">👟</div><div style="font-size:13px;font-weight:700;color:var(--ink2)">Sneakers</div><div style="font-size:15px;font-weight:800;color:var(--coral);margin-top:2px">From ₹999</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- COMPONENT: TrustStrip -->
+  <div class="trust-strip">
+    <div class="trust-inner">
+      <div class="trust-item"><span class="ti">🚚</span><div><div class="tt">Free shipping</div><div class="td">On orders above ₹999</div></div></div>
+      <div class="trust-item"><span class="ti">♻️</span><div><div class="tt">Easy 30-day returns</div><div class="td">No questions asked</div></div></div>
+      <div class="trust-item"><span class="ti">🌿</span><div><div class="tt">Skin-safe fabrics</div><div class="td">100% OEKO-TEX certified</div></div></div>
+      <div class="trust-item"><span class="ti">⭐</span><div><div class="tt">50,000+ parents</div><div class="td">4.8★ average rating</div></div></div>
+    </div>
+  </div>
+
+  <!-- COMPONENT: SocialProofTicker -->
+  <div id="sp-ticker" style="background:var(--coral-l);border-bottom:1px solid var(--border);padding:10px 18px;display:flex;align-items:center;gap:10px">
+    <span style="font-size:16px;flex-shrink:0">🟢</span>
+    <div id="sp-msg" style="font-size:12px;color:var(--coral-d);font-weight:600;transition:opacity .4s">Priya from Pune just bought Lion Safari Tee (4–5Y)</div>
+  </div>
+
+  <!-- COMPONENT: FirstTimerBanner -->
+  <div id="ftb" style="background:linear-gradient(90deg,var(--ink),#2D2D4E);padding:14px 18px;display:flex;align-items:center;justify-content:space-between;gap:12px">
+    <div style="display:flex;align-items:center;gap:10px">
+      <span style="font-size:22px;flex-shrink:0">🎁</span>
+      <div><div style="font-size:13px;font-weight:700;color:#fff">First order? Get 20% off</div><div style="font-size:11px;color:rgba(255,255,255,.65)">Use code NAVVY20 · Valid for 24 hours</div></div>
+    </div>
+    <button onclick="showToast('🎁 Code NAVVY20 copied! Use at checkout.');document.getElementById('ftb').style.display='none'" style="background:var(--sun);color:var(--ink);border:none;border-radius:50px;padding:8px 16px;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap;flex-shrink:0">Claim →</button>
+  </div>
+
+  <!-- COMPONENT: AgeGrid -->
+  <div class="section" style="padding-bottom:0">
+    <div class="sec-head"><div><div class="sec-title">Shop by age</div><div class="sec-sub">Find the perfect fit for every stage</div></div></div>
+    <div class="age-grid">
+      <div class="age-card" style="background:var(--coral-l);color:var(--coral-d)" onclick="go('s-plp')"><div class="ai">🍼</div><div class="al">Baby</div><div class="ar">0–12m</div></div>
+      <div class="age-card" style="background:var(--teal-l);color:var(--teal-d)" onclick="go('s-plp')"><div class="ai">🐣</div><div class="al">Toddler</div><div class="ar">1–3y</div></div>
+      <div class="age-card" style="background:var(--sun-l);color:var(--sun-d)" onclick="go('s-plp')"><div class="ai">🌈</div><div class="al">Kids</div><div class="ar">4–10y</div></div>
+      <div class="age-card" style="background:var(--purple-l);color:var(--purple-d)" onclick="go('s-plp')"><div class="ai">🎒</div><div class="al">Tweens</div><div class="ar">11–14y</div></div>
+    </div>
+  </div>
+
+  <!-- COMPONENT: ProductGrid (Bestsellers) -->
+  <div class="section">
+    <div class="sec-head">
+      <div><div class="sec-title">Bestsellers</div><div class="sec-sub">What parents and kids are loving right now</div></div>
+      <span class="sec-link" onclick="go('s-plp')">View all →</span>
+    </div>
+    <div class="grid-4" id="home-grid"></div>
+  </div>
+
+  <!-- COMPONENT: FabricStory (trust builder for first-time buyers) -->
+  <div style="background:var(--ink);padding:40px 18px;margin-bottom:0">
+    <div style="max-width:var(--maxw);margin:0 auto">
+      <div style="text-align:center;margin-bottom:28px">
+        <div style="font-size:11px;color:var(--teal);font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">Why parents choose us</div>
+        <div style="font-size:22px;font-weight:900;color:#fff;letter-spacing:-.3px">Not just clothes. A promise.</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;max-width:700px;margin:0 auto">
+        <div style="background:rgba(255,255,255,.06);border-radius:var(--radius);padding:18px;border:1px solid rgba(255,255,255,.08)">
+          <div style="font-size:28px;margin-bottom:10px">🌿</div>
+          <div style="font-size:14px;font-weight:700;color:#fff;margin-bottom:6px">OEKO-TEX certified</div>
+          <div style="font-size:12px;color:rgba(255,255,255,.6);line-height:1.6">Tested for 100+ harmful substances. Safe even for newborns with sensitive skin.</div>
+        </div>
+        <div style="background:rgba(255,255,255,.06);border-radius:var(--radius);padding:18px;border:1px solid rgba(255,255,255,.08)">
+          <div style="font-size:28px;margin-bottom:10px">🎨</div>
+          <div style="font-size:14px;font-weight:700;color:#fff;margin-bottom:6px">Colours that last</div>
+          <div style="font-size:12px;color:rgba(255,255,255,.6);line-height:1.6">Reactive dyes that stay vibrant through 50+ washes. No fading, no bleeding.</div>
+        </div>
+        <div style="background:rgba(255,255,255,.06);border-radius:var(--radius);padding:18px;border:1px solid rgba(255,255,255,.08)">
+          <div style="font-size:28px;margin-bottom:10px">🧵</div>
+          <div style="font-size:14px;font-weight:700;color:#fff;margin-bottom:6px">Built for play</div>
+          <div style="font-size:12px;color:rgba(255,255,255,.6);line-height:1.6">Reinforced seams, stretchable fabric. Survives everything a 5-year-old throws at it.</div>
+        </div>
+        <div style="background:rgba(255,255,255,.06);border-radius:var(--radius);padding:18px;border:1px solid rgba(255,255,255,.08)">
+          <div style="font-size:28px;margin-bottom:10px">♻️</div>
+          <div style="font-size:14px;font-weight:700;color:#fff;margin-bottom:6px">Easy returns</div>
+          <div style="font-size:12px;color:rgba(255,255,255,.6);line-height:1.6">30-day no-questions return. Wrong size? We'll exchange it. Free pickup from your door.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- COMPONENT: RealParentTestimonials -->
+  <div class="section" style="padding-top:48px">
+    <div class="sec-head">
+      <div><div class="sec-title">What parents are saying</div><div class="sec-sub">Real reviews from real families across India</div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr;gap:14px" id="testimonials-grid">
+      <div style="background:#fff;border-radius:var(--radius);border:1px solid var(--border);padding:18px">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+          <div style="width:44px;height:44px;border-radius:50%;background:var(--coral-l);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;color:var(--coral-d);flex-shrink:0">SR</div>
+          <div>
+            <div style="font-size:14px;font-weight:700">Sneha R.</div>
+            <div style="font-size:11px;color:var(--ink3)">Mom of 2 · Bangalore</div>
+          </div>
+          <div style="margin-left:auto;color:var(--sun);font-size:13px">★★★★★</div>
+        </div>
+        <div style="font-size:13px;color:var(--ink2);line-height:1.75;margin-bottom:10px">"My daughter has eczema and finding soft, non-irritating clothes is a nightmare. Navvyata's fabric is the only one she hasn't reacted to. We've ordered 6 times now and every piece is consistently good."</div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="background:var(--teal-l);color:var(--teal-d);font-size:10px;font-weight:700;padding:3px 9px;border-radius:50px">✓ Verified buyer</span>
+          <span style="font-size:11px;color:var(--ink3)">Bought: Fox Print Romper</span>
+        </div>
+      </div>
+      <div style="background:#fff;border-radius:var(--radius);border:1px solid var(--border);padding:18px">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+          <div style="width:44px;height:44px;border-radius:50%;background:var(--teal-l);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;color:var(--teal-d);flex-shrink:0">AM</div>
+          <div>
+            <div style="font-size:14px;font-weight:700">Ankit M.</div>
+            <div style="font-size:11px;color:var(--ink3)">Dad · Mumbai</div>
+          </div>
+          <div style="margin-left:auto;color:var(--sun);font-size:13px">★★★★★</div>
+        </div>
+        <div style="font-size:13px;color:var(--ink2);line-height:1.75;margin-bottom:10px">"Was sceptical ordering from a new brand but the quality genuinely surprised me. The Lion Tee looked even better in person. My son wore it 3 days in a row and threw a fit when I tried to wash it 😂"</div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="background:var(--teal-l);color:var(--teal-d);font-size:10px;font-weight:700;padding:3px 9px;border-radius:50px">✓ Verified buyer</span>
+          <span style="font-size:11px;color:var(--ink3)">Bought: Lion Safari Tee</span>
+        </div>
+      </div>
+      <div style="background:#fff;border-radius:var(--radius);border:1px solid var(--border);padding:18px">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+          <div style="width:44px;height:44px;border-radius:50%;background:var(--purple-l);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;color:var(--purple-d);flex-shrink:0">PK</div>
+          <div>
+            <div style="font-size:14px;font-weight:700">Preethi K.</div>
+            <div style="font-size:11px;color:var(--ink3)">Mom · Chennai</div>
+          </div>
+          <div style="margin-left:auto;color:var(--sun);font-size:13px">★★★★★</div>
+        </div>
+        <div style="font-size:13px;color:var(--ink2);line-height:1.75;margin-bottom:10px">"Delivery was in 2 days which I didn't expect! Packaging was so cute with a little note. The size ran exactly true to chart. Returning customer from now on — already gifted 3 sets to friends."</div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="background:var(--teal-l);color:var(--teal-d);font-size:10px;font-weight:700;padding:3px 9px;border-radius:50px">✓ Verified buyer</span>
+          <span style="font-size:11px;color:var(--ink3)">Bought: Sparkle Jogger Set</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- COMPONENT: PromoBanner -->
+  <div class="promo-banner">
+    <div class="promo-inner">
+      <div>
+        <div style="font-size:11px;color:rgba(255,255,255,.8);font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">Limited time</div>
+        <div class="promo-title">Buy 3, Get 1 FREE</div>
+        <button class="btn" style="background:#fff;color:var(--coral);padding:11px 24px;font-size:13px" onclick="go('s-sale')">Shop the offer →</button>
+      </div>
+      <div class="promo-emojis">👕👗🩳</div>
+    </div>
+  </div>
+
+  <!-- COMPONENT: BlogTeaser -->
+  <div class="section" style="padding-top:0">
+    <div class="sec-head">
+      <div><div class="sec-title">✍️ From our blog</div><div class="sec-sub">Style guides, sizing tips and parenting ideas</div></div>
+      <span class="sec-link" onclick="go('s-blog')">All articles →</span>
+    </div>
+    <div class="blog-grid">
+      <div class="bcard featured" onclick="go('s-blog-article')">
+        <div class="bcard-img" style="background:linear-gradient(135deg,var(--coral-l),var(--sun-l));height:150px;font-size:52px">☀️</div>
+        <div class="bcard-body"><div class="bcard-tag">Style guide</div><div class="bcard-title">5 summer outfits your kids will absolutely love in 2025</div><div class="bcard-meta">Navvyata Team · 5 min read</div></div>
+      </div>
+      <div class="bcard" onclick="go('s-blog-article')">
+        <div class="bcard-img" style="background:var(--teal-l);height:120px">📏</div>
+        <div class="bcard-body"><div class="bcard-tag">Sizing tips</div><div class="bcard-title">How to pick the right size every time</div><div class="bcard-meta">4 min read</div></div>
+      </div>
+      <div class="bcard" onclick="go('s-blog-article')">
+        <div class="bcard-img" style="background:var(--purple-l);height:120px">🎉</div>
+        <div class="bcard-body"><div class="bcard-tag">Occasions</div><div class="bcard-title">Diwali outfits — the 2025 festive edit</div><div class="bcard-meta">3 min read</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- COMPONENT: Newsletter -->
+  <div class="section" style="padding-top:0;padding-bottom:48px">
+    <div class="newsletter">
+      <div class="nl-title">Get 10% off your first order 🎁</div>
+      <div class="nl-sub">Join 50,000+ parents. No spam, ever.</div>
+      <div class="nl-form">
+        <input class="inp" placeholder="your@email.com" style="border-radius:50px">
+        <button class="btn btn-primary" onclick="showToast('🎉 Welcome! Check email for NAVVY10')">Join</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- COMPONENT: BottomNav (mobile) -->
+  <div id="bottom-nav">
+    <div class="bni on" onclick="go('s-home')"><div class="bi">🏠</div><div class="bl">Home</div></div>
+    <div class="bni" onclick="go('s-plp')"><div class="bi">🛒</div><div class="bl">Shop</div></div>
+    <div class="bni" onclick="go('s-search')"><div class="bi">🔍</div><div class="bl">Search</div></div>
+    <div class="bni" onclick="go('s-cart')" style="position:relative"><div class="bi">🛍️</div><span class="nav-bdg" id="bnbadge" style="top:2px;right:14px;display:none">0</span><div class="bl">Cart</div></div>
+    <div class="bni" onclick="go('s-account')"><div class="bi">👤</div><div class="bl">Account</div></div>
+  </div>
+</div>
+
+<!-- ============================================================
+     PAGE: Search
+     ============================================================ -->
+<div class="page" id="s-search">
+  <div class="section page-body">
+    <div class="sec-title" style="margin-bottom:16px">Search</div>
+    <input class="inp" id="search-inp" placeholder="Search clothes, brands…" oninput="liveSearch(this.value)" style="margin-bottom:20px;border-radius:50px;padding-left:18px">
+    <div id="sres" style="display:none">
+      <div style="font-size:12px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px">Results</div>
+      <div class="grid-4" id="sgrid"></div>
+    </div>
+    <div id="sdef">
+      <div style="font-size:12px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px">Trending</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:24px">
+        <div class="chip" onclick="searchFor('Lion tee')">Lion tee</div>
+        <div class="chip" onclick="searchFor('Dress')">Dresses</div>
+        <div class="chip" onclick="searchFor('Joggers')">Joggers</div>
+        <div class="chip" onclick="searchFor('Romper')">Rompers</div>
+        <div class="chip" onclick="searchFor('Shorts')">Shorts</div>
+      </div>
+      <div style="font-size:12px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px">Categories</div>
+      <div class="grid-4">
+        <div class="bcard" onclick="go('s-plp')"><div class="bcard-img" style="background:var(--coral-l);height:100px;font-size:36px">👕</div><div class="bcard-body"><div class="bcard-title" style="font-size:13px">Tops &amp; Tees</div><div class="bcard-meta">124 items</div></div></div>
+        <div class="bcard" onclick="go('s-plp')"><div class="bcard-img" style="background:var(--teal-l);height:100px;font-size:36px">👗</div><div class="bcard-body"><div class="bcard-title" style="font-size:13px">Dresses</div><div class="bcard-meta">87 items</div></div></div>
+        <div class="bcard" onclick="go('s-plp')"><div class="bcard-img" style="background:var(--sun-l);height:100px;font-size:36px">🩳</div><div class="bcard-body"><div class="bcard-title" style="font-size:13px">Bottoms</div><div class="bcard-meta">96 items</div></div></div>
+        <div class="bcard" onclick="go('s-plp')"><div class="bcard-img" style="background:var(--purple-l);height:100px;font-size:36px">🧥</div><div class="bcard-body"><div class="bcard-title" style="font-size:13px">Sets &amp; Combos</div><div class="bcard-meta">62 items</div></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     PAGE: PLP
+     ============================================================ -->
+<div class="page" id="s-plp">
+  <!-- COMPONENT: PLPHeader -->
+  <div class="plp-head">
+    <div class="plp-head-inner">
+      <div>
+        <div class="breadcrumb"><span onclick="go('s-home')">Home</span> / All products</div>
+        <div class="plp-title-text">All products</div>
+        <div class="plp-count">24 products</div>
+      </div>
+      <select class="sort-btn"><option>Featured</option><option>Price: Low to High</option><option>Price: High to Low</option><option>Newest</option><option>Best rated</option></select>
+    </div>
+  </div>
+  <!-- COMPONENT: FilterBar (mobile) -->
+  <div class="filter-bar">
+    <div class="chip on" style="font-size:12px">All</div>
+    <div class="chip" style="font-size:12px">Baby</div>
+    <div class="chip" style="font-size:12px">Toddler</div>
+    <div class="chip" style="font-size:12px">Kids</div>
+    <div class="chip" style="font-size:12px">Tweens</div>
+    <div class="chip" style="font-size:12px" onclick="document.getElementById('fdrawer').classList.add('open')">⚙️ Filters</div>
+  </div>
+  <div class="plp-body page-body">
+    <!-- COMPONENT: FilterSidebar (desktop) -->
+    <aside class="plp-sidebar">
+      <div class="filter-group">
+        <div class="filter-label">Age group</div>
+        <label class="filter-opt"><input type="checkbox" checked> Newborn (0–12m)</label>
+        <label class="filter-opt"><input type="checkbox" checked> Toddler (1–3y)</label>
+        <label class="filter-opt"><input type="checkbox"> Kids (4–10y)</label>
+        <label class="filter-opt"><input type="checkbox"> Tweens (11–14y)</label>
+      </div>
+      <div class="filter-group">
+        <div class="filter-label">Category</div>
+        <label class="filter-opt"><input type="checkbox" checked> Tops &amp; Tees</label>
+        <label class="filter-opt"><input type="checkbox"> Dresses</label>
+        <label class="filter-opt"><input type="checkbox"> Bottoms</label>
+        <label class="filter-opt"><input type="checkbox"> Sets &amp; Combos</label>
+      </div>
+      <div class="filter-group">
+        <div class="filter-label">Size</div>
+        <div class="size-pills">
+          <div class="chip on" style="font-size:12px">0M</div><div class="chip" style="font-size:12px">3M</div><div class="chip" style="font-size:12px">1Y</div><div class="chip" style="font-size:12px">2Y</div><div class="chip" style="font-size:12px">4Y</div><div class="chip" style="font-size:12px">6Y</div>
+        </div>
+      </div>
+      <div class="filter-group">
+        <div class="filter-label">Color</div>
+        <div class="color-dots">
+          <div class="cdot on" style="background:var(--coral)"></div>
+          <div class="cdot" style="background:var(--teal)"></div>
+          <div class="cdot" style="background:var(--sun)"></div>
+          <div class="cdot" style="background:var(--purple)"></div>
+          <div class="cdot" style="background:#22C55E"></div>
+          <div class="cdot" style="background:#2196F3"></div>
+        </div>
+      </div>
+      <div class="filter-group" style="border:none">
+        <div class="filter-label">Price range</div>
+        <input type="range" min="0" max="2000" value="1500" style="width:100%;accent-color:var(--coral)">
+        <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--ink3);margin-top:6px"><span>₹0</span><span>₹1,500</span></div>
+      </div>
+    </aside>
+    <div class="plp-grid-wrap">
+      <div class="grid-3" id="plp-grid"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     PAGE: Sale
+     ============================================================ -->
+<div class="page" id="s-sale">
+  <div style="background:var(--ink);padding:36px 18px;text-align:center">
+    <div style="font-size:11px;color:var(--sun);font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">Limited time</div>
+    <div style="font-size:28px;font-weight:900;color:#fff;margin-bottom:6px;letter-spacing:-.5px">Buy 3, Get 1 FREE</div>
+    <div style="font-size:13px;color:rgba(255,255,255,.7)">Mix and match any items. Valid on orders above ₹1,499.</div>
+  </div>
+  <div class="section page-body">
+    <div class="grid-4" id="sale-grid"></div>
+  </div>
+</div>
+
+<!-- ============================================================
+     PAGE: PDP
+     ============================================================ -->
+<div class="page" id="s-pdp">
+  <div class="section" style="padding-bottom:0;padding-top:16px">
+    <div class="breadcrumb"><span onclick="go('s-home')">Home</span> / <span onclick="go('s-plp')">Shop</span> / Lion Safari Tee</div>
+  </div>
+  <!-- COMPONENT: PDPGallery + PDPInfo (2-col on desktop) -->
+  <div class="pdp-wrap page-body">
+    <div class="pdp-gallery">
+      <div id="pdpimg" class="pdp-main-img" style="background:var(--coral-l)">🦁</div>
+      <div class="pdp-thumbs">
+        <div class="pdp-thumb on" style="background:var(--coral-l)" onclick="switchImg(this,'🦁','var(--coral-l)')">🦁</div>
+        <div class="pdp-thumb" style="background:var(--teal-l)" onclick="switchImg(this,'🌿','var(--teal-l)')">🌿</div>
+        <div class="pdp-thumb" style="background:var(--sun-l)" onclick="switchImg(this,'⭐','var(--sun-l)')">⭐</div>
+      </div>
+    </div>
+    <div class="pdp-info">
+      <div class="pdp-name">Lion Safari Tee</div>
+      <div class="pdp-rating">
+        <span style="color:var(--sun);font-size:14px">★★★★★</span>
+        <span style="font-size:13px;font-weight:700">4.9</span>
+        <span style="font-size:13px;color:var(--teal-d);cursor:pointer;font-weight:600" onclick="document.getElementById('reviews-sec').scrollIntoView({behavior:'smooth'})">128 reviews →</span>
+      </div>
+      <div class="pdp-price-row">
+        <span class="pdp-price">₹499</span>
+        <span class="pdp-old">₹799</span>
+        <span class="pill p-g">Save 38%</span>
+      </div>
+      <!-- EMI + social nudge -->
+      <div style="display:flex;flex-direction:column;gap:8px;margin-top:-10px;margin-bottom:18px;padding-bottom:18px;border-bottom:1px solid var(--border)">
+        <div style="font-size:12px;color:var(--teal-d);font-weight:600">📱 Or ₹167/mo with no-cost EMI · <span style="text-decoration:underline;cursor:pointer" onclick="showToast('EMI available via Simpl, LazyPay, ZestMoney')">See options</span></div>
+        <div style="display:flex;align-items:center;gap:8px;background:var(--coral-l);border-radius:var(--radius-sm);padding:8px 12px">
+          <span style="font-size:14px">🔥</span>
+          <span style="font-size:12px;color:var(--coral-d);font-weight:600">23 parents are viewing this right now · 47 sold today</span>
+        </div>
+      </div>
+      <div class="pdp-section">
+        <!-- Fit meter -->
+        <div style="background:var(--bg);border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between">
+          <div style="font-size:12px;color:var(--ink2)">Fit: <span style="font-weight:700;color:var(--ink)">Runs true to size</span></div>
+          <div style="display:flex;gap:3px;align-items:center">
+            <div style="height:5px;width:18px;border-radius:2px;background:var(--teal)"></div>
+            <div style="height:5px;width:18px;border-radius:2px;background:var(--teal)"></div>
+            <div style="height:5px;width:18px;border-radius:2px;background:var(--teal);opacity:.3"></div>
+          </div>
+          <div style="font-size:11px;color:var(--ink3)">94% agree</div>
+        </div>
+        <!-- Size calculator -->
+        <div style="background:var(--teal-l);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:12px">
+          <div style="font-size:12px;font-weight:700;color:var(--teal-d);margin-bottom:8px">🔢 Find your child's size</div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input id="child-age-inp" placeholder="Age (yrs)" type="number" min="0" max="14" style="flex:1;padding:8px 10px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;outline:none;width:0">
+            <input id="child-ht-inp" placeholder="Height (cm)" type="number" style="flex:1;padding:8px 10px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;outline:none;width:0">
+            <button onclick="calcSize()" style="background:var(--teal);color:#fff;border:none;border-radius:var(--radius-sm);padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">Get size</button>
+          </div>
+          <div id="size-rec" style="display:none;margin-top:8px;font-size:12px;font-weight:700;color:var(--teal-d)"></div>
+        </div>
+        <div class="pdp-section-label">
+          Select size <span id="szerr" style="color:var(--coral);font-weight:400;text-transform:none;font-size:11px;display:none">← please select</span>
+          <span style="font-size:12px;color:var(--teal-d);cursor:pointer;text-transform:none;letter-spacing:0;font-weight:600" onclick="go('s-sizeguide')">Size guide →</span>
+        </div>
+        <div class="pdp-size-row" id="szchips">
+          <div class="pdp-size" onclick="selSz(this)" style="position:relative">3–4Y</div>
+          <div class="pdp-size" onclick="selSz(this)" style="position:relative">4–5Y</div>
+          <div class="pdp-size" onclick="selSz(this)" style="position:relative">5–6Y<span style="position:absolute;top:-7px;right:-7px;background:var(--coral);color:#fff;font-size:8px;padding:1px 4px;border-radius:4px;font-weight:700;white-space:nowrap">2 left</span></div>
+          <div class="pdp-size" onclick="selSz(this)" style="position:relative">6–7Y</div>
+          <div class="pdp-size" onclick="selSz(this)" style="position:relative;opacity:.45;text-decoration:line-through;cursor:not-allowed" title="Out of stock">7–8Y</div>
+        </div>
+        <div style="font-size:11px;color:var(--ink3);margin-top:8px">7–8Y currently out of stock · <span style="color:var(--coral);font-weight:600;cursor:pointer" onclick="showToast('✅ We will notify you when 7–8Y is back!')">Notify me</span></div>
+      </div>
+      <div class="pdp-section">
+        <div class="pdp-section-label">Color: <span id="selcol" style="text-transform:none;font-weight:500;color:var(--ink2)">Coral</span></div>
+        <div class="pdp-colors" id="colrow">
+          <div class="pdp-color on" style="background:var(--coral)" onclick="selCol(this,'Coral')"></div>
+          <div class="pdp-color" style="background:var(--teal)" onclick="selCol(this,'Teal')"></div>
+          <div class="pdp-color" style="background:var(--sun)" onclick="selCol(this,'Yellow')"></div>
+          <div class="pdp-color" style="background:var(--purple)" onclick="selCol(this,'Purple')"></div>
+        </div>
+      </div>
+      <div class="pdp-section">
+        <div class="pdp-section-label">Quantity</div>
+        <div class="pdp-qty">
+          <button class="pdp-qty-btn" onclick="chQty(-1)">−</button>
+          <span id="pdpqty" style="font-size:16px;font-weight:700;min-width:22px;text-align:center">1</span>
+          <button class="pdp-qty-btn" onclick="chQty(1)">+</button>
+        </div>
+      </div>
+      <div class="pdp-features">
+        <div class="pdp-feat">🌿 Organic cotton</div>
+        <div class="pdp-feat">🔄 Machine washable</div>
+        <div class="pdp-feat">🚚 Free ship ₹999+</div>
+        <div class="pdp-feat">🛡️ OEKO-TEX safe</div>
+      </div>
+      <div class="pdp-ctas">
+        <button class="pdp-wish-btn" id="wcta" onclick="toggleWish()">🤍</button>
+        <button class="btn btn-primary" style="flex:1" onclick="pdpAdd()">Add to cart — ₹499</button>
+      </div>
+      <!-- Returns guarantee + WhatsApp -->
+      <div style="margin-top:12px;display:flex;flex-direction:column;gap:8px">
+        <div style="background:var(--green-l);border-radius:var(--radius-sm);padding:10px 14px;display:flex;align-items:center;gap:10px">
+          <span style="font-size:18px">🛡️</span>
+          <div style="font-size:12px;color:var(--green-d);font-weight:600">Free 30-day returns · Wrong size? Free exchange · No questions asked</div>
+        </div>
+        <button onclick="showToast('💬 Opening WhatsApp...')" style="background:#25D366;color:#fff;border:none;border-radius:var(--radius-sm);padding:11px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;width:100%">
+          <span style="font-size:16px">💬</span> Chat on WhatsApp — get size advice in 2 min
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- COMPONENT: CompleteLook -->
+  <div class="section" style="padding-top:32px">
+    <div class="sec-title" style="font-size:20px;margin-bottom:20px">Complete the look</div>
+    <div class="look-grid">
+      <div class="look-card" onclick="go('s-pdp')"><div class="look-img" style="background:var(--sun-l)">🩳</div><div style="font-size:13px;font-weight:700">Denim Shorts</div><div style="font-size:13px;font-weight:800;color:var(--coral)">₹449</div></div>
+      <div class="look-card" onclick="go('s-pdp')"><div class="look-img" style="background:var(--teal-l)">🧢</div><div style="font-size:13px;font-weight:700">Fun Cap</div><div style="font-size:13px;font-weight:800;color:var(--coral)">₹299</div></div>
+      <div class="look-card" onclick="go('s-pdp')"><div class="look-img" style="background:var(--purple-l)">🧦</div><div style="font-size:13px;font-weight:700">Cute Socks</div><div style="font-size:13px;font-weight:800;color:var(--coral)">₹149</div></div>
+      <div class="look-card" onclick="go('s-pdp')"><div class="look-img" style="background:var(--coral-l)">🎒</div><div style="font-size:13px;font-weight:700">Mini Backpack</div><div style="font-size:13px;font-weight:800;color:var(--coral)">₹699</div></div>
+    </div>
+  </div>
+
+  <!-- COMPONENT: Reviews -->
+  <div class="section" style="border-top:1px solid var(--border);padding-top:40px" id="reviews-sec">
+    <div class="sec-title" style="font-size:20px;margin-bottom:20px">Customer reviews</div>
+    <div style="display:flex;align-items:center;gap:24px;margin-bottom:24px;padding:20px;background:#fff;border-radius:var(--radius);border:1px solid var(--border)">
+      <div style="text-align:center;flex-shrink:0">
+        <div style="font-size:48px;font-weight:900;color:var(--ink)">4.9</div>
+        <div style="color:var(--sun);font-size:18px">★★★★★</div>
+        <div style="font-size:12px;color:var(--ink3);margin-top:3px">128 reviews</div>
+      </div>
+      <div style="flex:1">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px"><span style="font-size:12px;color:var(--ink3);width:12px">5</span><div style="flex:1;height:6px;background:var(--border);border-radius:3px;overflow:hidden"><div style="width:88%;height:100%;background:var(--sun)"></div></div><span style="font-size:12px;color:var(--ink3)">88%</span></div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px"><span style="font-size:12px;color:var(--ink3);width:12px">4</span><div style="flex:1;height:6px;background:var(--border);border-radius:3px;overflow:hidden"><div style="width:9%;height:100%;background:var(--sun)"></div></div><span style="font-size:12px;color:var(--ink3)">9%</span></div>
+        <div style="display:flex;align-items:center;gap:8px"><span style="font-size:12px;color:var(--ink3);width:12px">3</span><div style="flex:1;height:6px;background:var(--border);border-radius:3px;overflow:hidden"><div style="width:3%;height:100%;background:var(--sun)"></div></div><span style="font-size:12px;color:var(--ink3)">3%</span></div>
+      </div>
+    </div>
+    <div class="review-grid">
+      <div class="review-card"><div class="review-top"><div class="review-avatar" style="background:var(--teal-l);color:var(--teal-d)">PR</div><div><div style="font-weight:700;font-size:13px">Priya R.</div><div style="color:var(--sun);font-size:12px">★★★★★</div></div><div style="margin-left:auto;font-size:11px;color:var(--ink3)">2 days ago</div></div><div style="font-size:13px;color:var(--ink2);line-height:1.7">My 5-year-old loves this! The fabric is so soft and vibrant even after 10+ washes. Ordering another color!</div></div>
+      <div class="review-card"><div class="review-top"><div class="review-avatar" style="background:var(--sun-l);color:var(--sun-d)">AM</div><div><div style="font-weight:700;font-size:13px">Amit M.</div><div style="color:var(--sun);font-size:12px">★★★★★</div></div><div style="margin-left:auto;font-size:11px;color:var(--ink3)">1 week ago</div></div><div style="font-size:13px;color:var(--ink2);line-height:1.7">Great quality for the price. Sizing runs slightly large — perfect for growing into. Fast delivery too!</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     PAGE: Size Guide
+     ============================================================ -->
+<div class="page" id="s-sizeguide">
+  <div class="section page-body" style="max-width:700px">
+    <div class="sec-title" style="margin-bottom:8px">Size guide</div>
+    <p style="font-size:13px;color:var(--ink3);margin-bottom:24px">Measure chest and height. When between sizes, always go up.</p>
+    <div style="overflow:hidden;border-radius:var(--radius);border:1px solid var(--border)">
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <tr style="background:var(--coral);color:#fff"><th style="padding:12px 14px;text-align:left">Size</th><th style="padding:12px;text-align:center">Age</th><th style="padding:12px;text-align:center">Height (cm)</th><th style="padding:12px;text-align:center">Chest (cm)</th></tr>
+        <tr style="background:var(--bg)"><td style="padding:12px 14px;font-weight:700;color:var(--coral)">3–4Y</td><td style="padding:12px;text-align:center;color:var(--ink2)">3–4 yrs</td><td style="padding:12px;text-align:center;color:var(--ink2)">96–104</td><td style="padding:12px;text-align:center;color:var(--ink2)">53–56</td></tr>
+        <tr style="background:#fff;outline:2px solid var(--coral);outline-offset:-1px"><td style="padding:12px 14px;font-weight:700;color:var(--coral)">4–5Y ✓</td><td style="padding:12px;text-align:center;color:var(--ink2)">4–5 yrs</td><td style="padding:12px;text-align:center;color:var(--ink2)">104–110</td><td style="padding:12px;text-align:center;color:var(--ink2)">56–59</td></tr>
+        <tr style="background:var(--bg)"><td style="padding:12px 14px;font-weight:700;color:var(--coral)">5–6Y</td><td style="padding:12px;text-align:center;color:var(--ink2)">5–6 yrs</td><td style="padding:12px;text-align:center;color:var(--ink2)">110–116</td><td style="padding:12px;text-align:center;color:var(--ink2)">59–62</td></tr>
+        <tr style="background:#fff"><td style="padding:12px 14px;font-weight:700;color:var(--coral)">6–7Y</td><td style="padding:12px;text-align:center;color:var(--ink2)">6–7 yrs</td><td style="padding:12px;text-align:center;color:var(--ink2)">116–122</td><td style="padding:12px;text-align:center;color:var(--ink2)">62–65</td></tr>
+        <tr style="background:var(--bg)"><td style="padding:12px 14px;font-weight:700;color:var(--coral)">7–8Y</td><td style="padding:12px;text-align:center;color:var(--ink2)">7–8 yrs</td><td style="padding:12px;text-align:center;color:var(--ink2)">122–128</td><td style="padding:12px;text-align:center;color:var(--ink2)">65–68</td></tr>
+      </table>
+    </div>
+    <button class="btn btn-primary" onclick="goBack()" style="margin-top:24px">Got it ✓</button>
+  </div>
+</div>
+
+
+<!-- ============================================================
+     PAGE: Wishlist
+     ============================================================ -->
+<div class="page" id="s-wishlist">
+  <div class="section page-body">
+    <div class="sec-head"><div><div class="sec-title">Wishlist</div><div class="sec-sub">7 saved items</div></div></div>
+    <div class="grid-4" id="wish-grid"></div>
+  </div>
+</div>
+
+<!-- ============================================================
+     PAGE: Cart
+     ============================================================ -->
+<div class="page" id="s-cart">
+  <div class="cart-wrap page-body">
+    <div>
+      <div style="font-size:22px;font-weight:900;color:var(--ink);margin-bottom:20px" id="cart-title">Your cart</div>
+      <div id="cempty" style="text-align:center;padding:56px 20px;background:#fff;border-radius:var(--radius);border:1px solid var(--border)">
+        <div style="font-size:56px;margin-bottom:14px">🛒</div>
+        <div style="font-size:18px;font-weight:800;margin-bottom:6px">Your cart is empty</div>
+        <div style="font-size:13px;color:var(--ink3);margin-bottom:22px">Add something to get started!</div>
+        <button class="btn btn-primary" onclick="go('s-plp')">Start shopping →</button>
+      </div>
+      <div id="citems"></div>
+      <div id="upsell-wrap" style="margin-top:20px;display:none">
+        <div style="font-size:14px;font-weight:700;color:var(--ink);margin-bottom:12px">You might also need</div>
+        <div style="display:flex;gap:10px;overflow-x:auto;padding-bottom:4px">
+          <div onclick="addCart(event,'🧢','Fun Cap','All sizes','₹299',299,'var(--sun-l)')" style="flex:0 0 88px;background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:12px;text-align:center;cursor:pointer;transition:box-shadow .15s" onmouseover="this.style.boxShadow='0 4px 16px rgba(0,0,0,.1)'" onmouseout="this.style.boxShadow=''"><div style="font-size:28px">🧢</div><div style="font-size:11px;font-weight:600;margin-top:6px">Fun Cap</div><div style="font-size:12px;color:var(--coral);font-weight:700">₹299</div></div>
+          <div onclick="addCart(event,'🩳','Denim Shorts','4–5Y','₹449',449,'var(--teal-l)')" style="flex:0 0 88px;background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:12px;text-align:center;cursor:pointer;transition:box-shadow .15s" onmouseover="this.style.boxShadow='0 4px 16px rgba(0,0,0,.1)'" onmouseout="this.style.boxShadow=''"><div style="font-size:28px">🩳</div><div style="font-size:11px;font-weight:600;margin-top:6px">Denim Shorts</div><div style="font-size:12px;color:var(--coral);font-weight:700">₹449</div></div>
+          <div onclick="addCart(event,'🧦','Cute Socks','All sizes','₹149',149,'var(--purple-l)')" style="flex:0 0 88px;background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:12px;text-align:center;cursor:pointer;transition:box-shadow .15s" onmouseover="this.style.boxShadow='0 4px 16px rgba(0,0,0,.1)'" onmouseout="this.style.boxShadow=''"><div style="font-size:28px">🧦</div><div style="font-size:11px;font-weight:600;margin-top:6px">Cute Socks</div><div style="font-size:12px;color:var(--coral);font-weight:700">₹149</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="order-summary-box" id="summary-box" style="display:none;height:fit-content;position:sticky;top:calc(var(--nav-h) + 16px)">
+      <div style="font-size:16px;font-weight:800;color:var(--ink);margin-bottom:18px">Order summary</div>
+      <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--ink2);margin-bottom:10px"><span id="sitemlbl">Items</span><span id="ssub">₹0</span></div>
+      <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--ink2);margin-bottom:10px"><span>Shipping</span><span style="color:var(--teal-d);font-weight:700">FREE</span></div>
+      <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--coral);margin-bottom:14px"><span>Discount</span><span id="sdisc">−₹0</span></div>
+      <div style="display:flex;gap:8px;margin-bottom:16px">
+        <input class="inp" id="cinp" placeholder="Coupon (try NAVVY20)" style="flex:1;font-size:12px;padding:9px 12px">
+        <button class="btn btn-outline btn-sm" onclick="applyCoupon()">Apply</button>
+      </div>
+      <div style="border-top:1px solid var(--border);padding-top:14px;display:flex;justify-content:space-between;font-size:16px;font-weight:800;margin-bottom:18px"><span>Total</span><span style="color:var(--coral)" id="stotal">₹0</span></div>
+      <button class="btn btn-primary btn-full" onclick="go('s-checkout-addr')">Proceed to checkout →</button>
+      <div style="text-align:center;font-size:11px;color:var(--ink3);margin-top:12px">🔒 Secure and encrypted</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     PAGE: Checkout — Address
+     ============================================================ -->
+<div class="page" id="s-checkout-addr">
+  <div class="checkout-wrap page-body">
+    <div class="checkout-form-col">
+      <div class="step-row">
+        <div style="text-align:center"><div class="step-dot act">1</div></div>
+        <div class="step-line"></div>
+        <div style="text-align:center"><div class="step-dot todo">2</div></div>
+        <div class="step-line"></div>
+        <div style="text-align:center"><div class="step-dot todo">3</div></div>
+      </div>
+      <div style="font-size:18px;font-weight:800;color:var(--ink);margin-bottom:16px">Delivery address</div>
+      <div class="addr-card on">
+        <div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="font-weight:700;color:var(--coral-d);font-size:13px">🏠 Home <span class="pill p-c">Default</span></span><div style="width:16px;height:16px;border-radius:50%;background:var(--coral)"></div></div>
+        <div style="font-size:13px;color:var(--ink2);line-height:1.6">Priya Sharma · 42, Green Park Colony<br>Nagpur, MH – 440010</div>
+      </div>
+      <div onclick="go('s-addr-form')" style="border:1.5px dashed var(--border);border-radius:var(--radius);padding:14px;cursor:pointer;display:flex;align-items:center;gap:8px;justify-content:center;margin-bottom:22px;background:#fff">
+        <span style="color:var(--coral);font-size:18px">＋</span><span style="font-size:13px;font-weight:700;color:var(--coral)">Add new address</span>
+      </div>
+      <div style="font-size:13px;font-weight:700;color:var(--ink);margin-bottom:12px">Delivery preference</div>
+      <div style="display:flex;gap:12px">
+        <div style="flex:1;background:var(--teal-l);border:2px solid var(--teal);border-radius:var(--radius);padding:14px;cursor:pointer;text-align:center">
+          <div style="font-size:13px;font-weight:700;color:var(--teal-d)">Standard</div>
+          <div style="font-size:11px;color:var(--teal-d)">3–5 days · FREE</div>
+        </div>
+        <div style="flex:1;background:#fff;border:1.5px solid var(--border);border-radius:var(--radius);padding:14px;cursor:pointer;text-align:center">
+          <div style="font-size:13px;font-weight:700">Express</div>
+          <div style="font-size:11px;color:var(--ink3)">1–2 days · ₹99</div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="order-summary-box">
+        <div style="font-size:15px;font-weight:800;color:var(--ink);margin-bottom:14px">Order summary</div>
+        <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--ink2);margin-bottom:14px"><span>Total</span><span style="font-weight:800;color:var(--coral)" id="cototal">₹0</span></div>
+        <button class="btn btn-primary btn-full" onclick="go('s-checkout-pay')">Continue to payment →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     PAGE: Checkout — Address Form
+     ============================================================ -->
+<div class="page" id="s-addr-form">
+  <div class="section page-body" style="max-width:600px">
+    <div style="font-size:20px;font-weight:900;margin-bottom:22px">Add new address</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="field"><label>Full name</label><input class="inp" placeholder="Your full name"></div>
+      <div class="field"><label>Phone</label><input class="inp" placeholder="+91 98765 43210"></div>
+    </div>
+    <div class="field"><label>Address</label><input class="inp" placeholder="Flat, building, street, area"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="field"><label>Pincode</label><input class="inp" placeholder="440010"></div>
+      <div class="field"><label>City</label><input class="inp" placeholder="Nagpur"></div>
+    </div>
+    <div class="field"><label>State</label><input class="inp" placeholder="Maharashtra"></div>
+    <div class="field"><label>Type</label><div style="display:flex;gap:8px"><div class="chip on">🏠 Home</div><div class="chip">🏢 Office</div><div class="chip">📍 Other</div></div></div>
+    <button class="btn btn-primary" onclick="showToast('✅ Address saved!');goBack()">Save address</button>
+  </div>
+</div>
+
+<!-- ============================================================
+     PAGE: Checkout — Payment
+     ============================================================ -->
+<div class="page" id="s-checkout-pay">
+  <div class="checkout-wrap page-body">
+    <div class="checkout-form-col">
+      <div class="step-row">
+        <div class="step-dot done">✓</div>
+        <div class="step-line done"></div>
+        <div class="step-dot act">2</div>
+        <div class="step-line"></div>
+        <div class="step-dot todo">3</div>
+      </div>
+      <div style="font-size:18px;font-weight:800;color:var(--ink);margin-bottom:16px">Payment method</div>
+      <div class="pay-method on"><div class="pay-icon">📱</div><div style="flex:1"><div style="font-weight:700;font-size:14px">UPI</div><div style="font-size:12px;color:var(--ink3)">GPay, PhonePe, Paytm</div></div><div style="width:16px;height:16px;border-radius:50%;background:var(--coral)"></div></div>
+      <div class="pay-method"><div class="pay-icon">💳</div><div style="flex:1"><div style="font-weight:700;font-size:14px">Credit / Debit card</div><div style="font-size:12px;color:var(--ink3)">Visa, Mastercard, RuPay</div></div></div>
+      <div class="pay-method"><div class="pay-icon">📦</div><div style="flex:1"><div style="font-weight:700;font-size:14px">Cash on delivery</div><div style="font-size:12px;color:var(--ink3)">Pay when it arrives</div></div></div>
+    </div>
+    <div>
+      <div class="order-summary-box">
+        <div style="font-size:15px;font-weight:800;color:var(--ink);margin-bottom:14px">Order summary</div>
+        <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--ink2);margin-bottom:14px"><span>Total</span><span style="font-weight:800;color:var(--coral)" id="paytotal">₹0</span></div>
+        <button class="btn btn-primary btn-full" id="paybtn" onclick="placeOrder()">Pay →</button>
+        <div style="text-align:center;font-size:11px;color:var(--ink3);margin-top:12px">🔒 256-bit SSL encrypted</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     PAGE: Order Confirm
+     ============================================================ -->
+<div class="page" id="s-confirm">
+  <div style="max-width:520px;margin:0 auto;padding:48px 18px 80px;text-align:center" class="page-body">
+    <!-- Confetti-style celebration header -->
+    <div style="background:linear-gradient(135deg,var(--green-l),var(--teal-l));border-radius:var(--radius-lg);padding:28px 20px;margin-bottom:20px">
+      <div style="font-size:52px;margin-bottom:10px">🎉</div>
+      <div style="font-size:24px;font-weight:900;color:var(--ink);margin-bottom:6px">Order confirmed!</div>
+      <div style="font-size:13px;color:var(--ink2)">Woohoo! Your little one is going to love this 🌟</div>
+    </div>
+
+    <!-- Order details -->
+    <div class="card" style="padding:18px;text-align:left;margin-bottom:14px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--border)">
+        <div><div style="font-size:11px;color:var(--ink3)">Order ID</div><div style="font-size:15px;font-weight:800">#NVY-2025-08471</div></div>
+        <span class="pill p-g">Confirmed ✓</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:10px">
+        <div style="font-size:12px;color:var(--ink3)">Estimated delivery</div>
+        <div style="font-size:13px;font-weight:700;color:var(--teal-d)">Thu 3 – Sat 5 Jul</div>
+      </div>
+      <div style="display:flex;justify-content:space-between">
+        <div style="font-size:12px;color:var(--ink3)">Delivering to</div>
+        <div style="font-size:13px;color:var(--ink2)">Priya S., Nagpur</div>
+      </div>
+    </div>
+
+    <!-- WhatsApp updates opt-in -->
+    <div style="background:#E7FAE9;border:1.5px solid #25D366;border-radius:var(--radius);padding:16px;margin-bottom:14px;text-align:left">
+      <div style="display:flex;align-items:flex-start;gap:12px">
+        <span style="font-size:24px;flex-shrink:0">💬</span>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:700;color:var(--ink);margin-bottom:4px">Get updates on WhatsApp</div>
+          <div style="font-size:12px;color:var(--ink2);margin-bottom:10px">Packed → Dispatched → Out for delivery — instant updates, no app needed.</div>
+          <button onclick="showToast('✅ WhatsApp updates activated!')" style="background:#25D366;color:#fff;border:none;border-radius:50px;padding:9px 20px;font-size:12px;font-weight:700;cursor:pointer">Yes, send me updates</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Referral nudge — highest emotional moment -->
+    <div style="background:linear-gradient(135deg,var(--coral-l),var(--sun-l));border-radius:var(--radius);padding:18px;margin-bottom:14px;text-align:left">
+      <div style="font-size:13px;font-weight:800;color:var(--ink);margin-bottom:4px">🎁 Share the love, earn ₹200</div>
+      <div style="font-size:12px;color:var(--ink2);margin-bottom:12px">Know a parent who'd love Navvyata? Share your code — they get ₹200 off their first order, you get ₹200 too.</div>
+      <div style="display:flex;gap:8px">
+        <div style="flex:1;background:#fff;border-radius:var(--radius-sm);padding:10px 14px;font-size:13px;font-weight:700;color:var(--coral);border:1.5px dashed var(--coral)">PRIYA200</div>
+        <button onclick="showToast('🔗 Referral link copied to clipboard!')" style="background:var(--coral);color:#fff;border:none;border-radius:var(--radius-sm);padding:10px 18px;font-size:12px;font-weight:700;cursor:pointer">Share</button>
+        <button onclick="showToast('💬 Opening WhatsApp share...')" style="background:#25D366;color:#fff;border:none;border-radius:var(--radius-sm);padding:10px 14px;font-size:16px;cursor:pointer">💬</button>
+      </div>
+    </div>
+
+    <!-- Care instructions -->
+    <div class="card" style="padding:16px;text-align:left;margin-bottom:20px">
+      <div style="font-size:12px;font-weight:700;color:var(--ink);margin-bottom:10px">💡 Care tips for your order</div>
+      <div style="display:flex;flex-direction:column;gap:7px">
+        <div style="font-size:12px;color:var(--ink2);display:flex;gap:8px"><span>🌡️</span> Machine wash cold (30°C max) to preserve colour</div>
+        <div style="font-size:12px;color:var(--ink2);display:flex;gap:8px"><span>🚫</span> No bleach — damages OEKO-TEX certification</div>
+        <div style="font-size:12px;color:var(--ink2);display:flex;gap:8px"><span>☀️</span> Dry in shade — direct sun fades prints over time</div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:12px">
+      <button class="btn btn-teal" style="flex:1" onclick="go('s-tracking')">Track order →</button>
+      <button class="btn btn-outline" style="flex:1" onclick="go('s-home')">Shop more</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     PAGE: Order Tracking
+     ============================================================ -->
+<div class="page" id="s-tracking">
+  <div class="section page-body" style="max-width:680px">
+    <div style="font-size:22px;font-weight:900;margin-bottom:20px">Track your order</div>
+    <div style="background:var(--teal-l);border-radius:var(--radius);padding:16px;margin-bottom:28px">
+      <div style="font-size:11px;color:var(--teal-d);font-weight:700">Expected delivery</div>
+      <div style="font-size:18px;font-weight:800;color:var(--teal-d)">Thu, 3 Jul 2025</div>
+      <div style="font-size:12px;color:var(--teal-d);margin-top:3px">#NVY-2025-08471 · 3 items</div>
+    </div>
+    <div class="track-step"><div style="display:flex;flex-direction:column;align-items:center"><div class="track-dot" style="background:var(--green)"></div><div class="track-line-v done"></div></div><div style="margin-left:14px;padding-bottom:24px"><div style="font-size:14px;font-weight:700">Order confirmed</div><div style="font-size:12px;color:var(--ink3)">Mon, 30 Jun · 2:34 PM</div></div></div>
+    <div class="track-step"><div style="display:flex;flex-direction:column;align-items:center"><div class="track-dot" style="background:var(--green)"></div><div class="track-line-v done"></div></div><div style="margin-left:14px;padding-bottom:24px"><div style="font-size:14px;font-weight:700">Packed and dispatched</div><div style="font-size:12px;color:var(--ink3)">Tue, 1 Jul · 10:15 AM</div></div></div>
+    <div class="track-step"><div style="display:flex;flex-direction:column;align-items:center"><div class="track-dot" style="background:var(--coral);outline:3px solid var(--coral-l)"></div><div class="track-line-v"></div></div><div style="margin-left:14px;padding-bottom:24px"><div style="font-size:14px;font-weight:700;color:var(--coral)">Out for delivery ← Now</div><div style="font-size:12px;color:var(--ink3)">Wed, 2 Jul · Est. 6 PM</div></div></div>
+    <div class="track-step"><div style="display:flex;flex-direction:column;align-items:center"><div class="track-dot" style="background:var(--border)"></div></div><div style="margin-left:14px"><div style="font-size:14px;font-weight:600;color:var(--ink3)">Delivered</div><div style="font-size:12px;color:var(--ink3)">Thu, 3 Jul (estimated)</div></div></div>
+    <div style="display:flex;gap:12px;margin-top:28px">
+      <button class="btn btn-outline btn-sm" style="flex:1" onclick="go('s-returns')">Return / exchange</button>
+      <button class="btn btn-teal btn-sm" style="flex:1" onclick="go('s-help')">Help</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     PAGE: Account
+     ============================================================ -->
+<div class="page" id="s-account">
+  <div class="account-wrap page-body">
+    <div class="card" style="padding:18px;display:flex;align-items:center;gap:14px;margin-bottom:18px">
+      <div style="width:52px;height:52px;border-radius:50%;background:var(--coral);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;color:#fff;flex-shrink:0">PS</div>
+      <div><div style="font-size:17px;font-weight:800">Priya Sharma</div><div style="font-size:12px;color:var(--ink3)">priya@email.com</div></div>
+    </div>
+    <div style="background:linear-gradient(120deg,var(--coral),#FF8E53);border-radius:var(--radius);padding:18px;color:#fff;margin-bottom:16px;cursor:pointer;display:flex;justify-content:space-between;align-items:center" onclick="go('s-rewards')">
+      <div><div style="font-size:10px;opacity:.8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Navvyata Rewards</div><div style="font-size:20px;font-weight:900">🌟 480 coins</div><div style="font-size:12px;opacity:.85;margin-top:2px">= ₹48 off your next order</div></div>
+      <span style="font-size:13px;font-weight:700">View →</span>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px">
+      <div onclick="go('s-order-detail')" style="background:var(--coral-l);border-radius:var(--radius);padding:16px;text-align:center;cursor:pointer"><div style="font-size:22px;font-weight:800;color:var(--coral)">3</div><div style="font-size:11px;color:var(--coral-d);font-weight:600">Orders</div></div>
+      <div onclick="go('s-wishlist')" style="background:var(--purple-l);border-radius:var(--radius);padding:16px;text-align:center;cursor:pointer"><div style="font-size:22px;font-weight:800;color:var(--purple)">7</div><div style="font-size:11px;color:var(--purple-d);font-weight:600">Wishlist</div></div>
+      <div style="background:var(--sun-l);border-radius:var(--radius);padding:16px;text-align:center"><div style="font-size:22px;font-weight:800;color:var(--sun-d)">₹480</div><div style="font-size:11px;color:var(--sun-d);font-weight:600">Saved</div></div>
+    </div>
+    <div class="menu-list">
+      <div class="menu-row" onclick="go('s-order-detail')"><span style="font-size:18px">📦</span><span style="flex:1;font-size:14px;font-weight:600">My orders</span><span style="color:var(--ink3)">›</span></div>
+      <div class="menu-row" onclick="go('s-wishlist')"><span style="font-size:18px">❤️</span><span style="flex:1;font-size:14px;font-weight:600">Wishlist</span><span style="color:var(--ink3)">›</span></div>
+      <div class="menu-row" onclick="go('s-kids-profile')"><span style="font-size:18px">👧</span><span style="flex:1;font-size:14px;font-weight:600">Kids profiles</span><span class="pill p-t" style="margin-right:6px;font-size:9px">New</span><span style="color:var(--ink3)">›</span></div>
+      <div class="menu-row" onclick="go('s-returns')"><span style="font-size:18px">🔄</span><span style="flex:1;font-size:14px;font-weight:600">Returns and exchanges</span><span style="color:var(--ink3)">›</span></div>
+      <div class="menu-row" onclick="go('s-blog')"><span style="font-size:18px">✍️</span><span style="flex:1;font-size:14px;font-weight:600">Blog and tips</span><span style="color:var(--ink3)">›</span></div>
+      <div class="menu-row" onclick="go('s-help')"><span style="font-size:18px">💬</span><span style="flex:1;font-size:14px;font-weight:600">Help and support</span><span style="color:var(--ink3)">›</span></div>
+      <div class="menu-row" onclick="go('s-about')"><span style="font-size:18px">🌿</span><span style="flex:1;font-size:14px;font-weight:600">About Navvyata</span><span style="color:var(--ink3)">›</span></div>
+      <div class="menu-row" onclick="go('s-login')"><span style="font-size:18px">🚪</span><span style="flex:1;font-size:14px;font-weight:600;color:var(--ink3)">Sign out</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     PAGE: Order Detail
+     ============================================================ -->
+<div class="page" id="s-order-detail">
+  <div class="section page-body" style="max-width:700px">
+    <div style="font-size:20px;font-weight:900;margin-bottom:20px">My orders</div>
+    <div class="card" style="overflow:hidden;margin-bottom:14px">
+      <div style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center"><div><div style="font-weight:700;font-size:13px">#NVY-2025-08471</div><div style="font-size:11px;color:var(--ink3)">Mon 30 Jun 2025 · 3 items</div></div><span class="pill p-t">Out for delivery</span></div>
+      <div style="padding:14px 18px"><div style="display:flex;gap:8px;margin-bottom:12px"><div style="width:44px;height:44px;background:var(--coral-l);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;font-size:20px">🦁</div><div style="width:44px;height:44px;background:var(--teal-l);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;font-size:20px">🌸</div><div style="width:44px;height:44px;background:var(--sun-l);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;font-size:20px">🚀</div></div><div style="display:flex;gap:8px"><button class="btn btn-outline btn-sm" style="flex:1" onclick="go('s-tracking')">Track</button><button class="btn btn-teal btn-sm" style="flex:1" onclick="go('s-returns')">Return</button></div></div>
+    </div>
+    <div class="card" style="overflow:hidden">
+      <div style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center"><div><div style="font-weight:700;font-size:13px">#NVY-2025-07203</div><div style="font-size:11px;color:var(--ink3)">Sat 14 Jun 2025 · 2 items</div></div><span class="pill p-g">Delivered</span></div>
+      <div style="padding:14px 18px"><div style="display:flex;gap:8px;margin-bottom:12px"><div style="width:44px;height:44px;background:var(--purple-l);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;font-size:20px">🌟</div><div style="width:44px;height:44px;background:var(--coral-l);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;font-size:20px">🦊</div></div><div style="display:flex;gap:8px"><button class="btn btn-outline btn-sm" style="flex:1" onclick="showToast('📄 Invoice downloading...')">Invoice</button><button class="btn btn-primary btn-sm" style="flex:1" onclick="go('s-reviews-page')">Write review</button></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     PAGE: Returns
+     ============================================================ -->
+<div class="page" id="s-returns">
+  <div class="section page-body" style="max-width:620px">
+    <div style="font-size:20px;font-weight:900;margin-bottom:16px">Return / exchange</div>
+    <div style="background:var(--sun-l);border-radius:var(--radius-sm);padding:12px 16px;margin-bottom:20px;font-size:13px;color:var(--sun-d)">ℹ️ Returns accepted within 30 days. Item must be unworn with tags intact.</div>
+    <div style="font-size:14px;font-weight:700;margin-bottom:12px">Select item to return</div>
+    <div style="background:var(--coral-l);border:2px solid var(--coral);border-radius:var(--radius);padding:14px;margin-bottom:10px;display:flex;align-items:center;gap:12px;cursor:pointer"><div style="width:46px;height:46px;background:#fff;border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;font-size:22px">🦁</div><div style="flex:1"><div style="font-weight:700;font-size:13px">Lion Safari Tee</div><div style="font-size:11px;color:var(--ink3)">Size 4–5Y · ₹499</div></div><div style="width:16px;height:16px;border-radius:50%;background:var(--coral)"></div></div>
+    <div style="background:#fff;border:1.5px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:20px;display:flex;align-items:center;gap:12px;cursor:pointer"><div style="width:46px;height:46px;background:var(--teal-l);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;font-size:22px">🌸</div><div style="flex:1"><div style="font-weight:700;font-size:13px">Floral Dress</div><div style="font-size:11px;color:var(--ink3)">Size 3–4Y · ₹749</div></div><div style="width:16px;height:16px;border-radius:50%;border:2px solid var(--border)"></div></div>
+    <div style="font-size:13px;font-weight:700;margin-bottom:10px">Reason for return</div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px"><div class="chip on">Wrong size</div><div class="chip">Defective</div><div class="chip">Not as described</div><div class="chip">Changed mind</div></div>
+    <div style="font-size:13px;font-weight:700;margin-bottom:10px">Refund to</div>
+    <div style="display:flex;gap:8px;margin-bottom:24px"><div class="chip on">Original payment</div><div class="chip">Navvyata wallet</div></div>
+    <button class="btn btn-primary" onclick="showToast('✅ Return submitted! Pickup in 2 days.')">Submit return request</button>
+  </div>
+</div>
+
+<!-- ============================================================
+     PAGE: Help
+     ============================================================ -->
+<div class="page" id="s-help">
+  <div class="section page-body" style="max-width:680px">
+    <div style="font-size:20px;font-weight:900;margin-bottom:20px">Help and support</div>
+    <div style="display:flex;gap:12px;margin-bottom:28px">
+      <div onclick="showToast('💬 Connecting to live chat...')" style="flex:1;background:var(--teal-l);border-radius:var(--radius);padding:18px;text-align:center;cursor:pointer"><div style="font-size:26px;margin-bottom:6px">💬</div><div style="font-size:12px;font-weight:700;color:var(--teal-d)">Live chat</div><div style="font-size:10px;color:var(--teal-d)">~2 min</div></div>
+      <div onclick="showToast('📞 Opening dialer...')" style="flex:1;background:var(--coral-l);border-radius:var(--radius);padding:18px;text-align:center;cursor:pointer"><div style="font-size:26px;margin-bottom:6px">📞</div><div style="font-size:12px;font-weight:700;color:var(--coral-d)">Call us</div><div style="font-size:10px;color:var(--coral-d)">9AM–7PM</div></div>
+      <div onclick="showToast('📧 Opening email...')" style="flex:1;background:var(--sun-l);border-radius:var(--radius);padding:18px;text-align:center;cursor:pointer"><div style="font-size:26px;margin-bottom:6px">📧</div><div style="font-size:12px;font-weight:700;color:var(--sun-d)">Email</div><div style="font-size:10px;color:var(--sun-d)">24h reply</div></div>
+    </div>
+    <div style="font-size:15px;font-weight:700;margin-bottom:14px">Frequently asked</div>
+    <div class="card" style="overflow:hidden">
+      <div onclick="toggleFAQ(this)" style="padding:15px 18px;display:flex;justify-content:space-between;cursor:pointer;border-bottom:1px solid var(--border)"><span style="font-size:13px;font-weight:600">How do I track my order?</span><span>›</span></div>
+      <div style="display:none;padding:4px 18px 14px;font-size:13px;color:var(--ink2);border-bottom:1px solid var(--border);line-height:1.7">Go to Account → My orders → tap Track. You'll also get live SMS updates.</div>
+      <div onclick="toggleFAQ(this)" style="padding:15px 18px;display:flex;justify-content:space-between;cursor:pointer;border-bottom:1px solid var(--border)"><span style="font-size:13px;font-weight:600">What is the return policy?</span><span>›</span></div>
+      <div style="display:none;padding:4px 18px 14px;font-size:13px;color:var(--ink2);border-bottom:1px solid var(--border);line-height:1.7">30-day no-questions-asked returns. Item must be unworn with original tags.</div>
+      <div onclick="toggleFAQ(this)" style="padding:15px 18px;display:flex;justify-content:space-between;cursor:pointer;border-bottom:1px solid var(--border)"><span style="font-size:13px;font-weight:600">How to find the right size?</span><span>›</span></div>
+      <div style="display:none;padding:4px 18px 14px;font-size:13px;color:var(--ink2);border-bottom:1px solid var(--border);line-height:1.7">Check the size guide on any product page. When in doubt, size up — kids grow fast!</div>
+      <div onclick="toggleFAQ(this)" style="padding:15px 18px;display:flex;justify-content:space-between;cursor:pointer"><span style="font-size:13px;font-weight:600">Are fabrics safe for babies?</span><span>›</span></div>
+      <div style="display:none;padding:4px 18px 14px;font-size:13px;color:var(--ink2);line-height:1.7">All fabrics are 100% OEKO-TEX certified — free of harmful chemicals, safe even for newborns.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     PAGE: Kids Profile
+     ============================================================ -->
+<div class="page" id="s-kids-profile">
+  <div class="section page-body" style="max-width:560px">
+    <div style="font-size:20px;font-weight:900;margin-bottom:8px">Kids profiles</div>
+    <div style="font-size:13px;color:var(--ink3);margin-bottom:20px">Save your child's details for auto-filtered sizing.</div>
+    <div class="card" style="padding:16px;display:flex;align-items:center;gap:12px;margin-bottom:10px"><div style="width:44px;height:44px;border-radius:50%;background:var(--coral-l);display:flex;align-items:center;justify-content:center;font-size:20px">👧</div><div style="flex:1"><div style="font-weight:700;font-size:14px">Aanya</div><div style="font-size:12px;color:var(--ink3)">5 years · Size 4–5Y</div></div><span class="pill p-c">Active</span></div>
+    <div onclick="showToast('👶 Coming soon!')" style="border:1.5px dashed var(--border);border-radius:var(--radius);padding:16px;cursor:pointer;display:flex;align-items:center;gap:8px;justify-content:center;margin-bottom:20px;background:#fff"><span style="color:var(--coral);font-size:18px">＋</span><span style="font-size:13px;font-weight:700;color:var(--coral)">Add another child</span></div>
+    <div style="background:var(--sun-l);border-radius:var(--radius);padding:16px;display:flex;justify-content:space-between;align-items:center"><div><div style="font-size:13px;font-weight:700;color:var(--sun-d)">🎂 Birthday in 23 days!</div><div style="font-size:11px;color:var(--sun-d);margin-top:3px">Shop Aanya's birthday outfits →</div></div><button class="btn btn-primary btn-sm" onclick="go('s-plp')">Shop</button></div>
+  </div>
+</div>
+
+<!-- ============================================================
+     PAGE: Rewards
+     ============================================================ -->
+<div class="page" id="s-rewards">
+  <div class="section page-body" style="max-width:580px">
+    <div style="background:linear-gradient(120deg,var(--coral),#FF8E53);border-radius:var(--radius-lg);padding:36px;text-align:center;color:#fff;margin-bottom:24px">
+      <div style="font-size:11px;opacity:.8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Your balance</div>
+      <div style="font-size:48px;font-weight:900;margin-bottom:4px">🌟 480</div>
+      <div style="opacity:.85;margin-bottom:18px">coins = ₹48 off your next order</div>
+      <button onclick="showToast('🎁 ₹48 off applied to cart!')" style="background:#fff;color:var(--coral);border:none;border-radius:50px;padding:11px 26px;font-weight:700;cursor:pointer;font-size:14px">Redeem →</button>
+    </div>
+    <div style="font-size:15px;font-weight:700;margin-bottom:14px">How to earn coins</div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div class="card" style="padding:14px;display:flex;align-items:center;gap:12px"><div style="width:40px;height:40px;background:var(--sun-l);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;font-size:18px">🛍️</div><div style="flex:1"><div style="font-weight:700;font-size:13px">Make a purchase</div><div style="font-size:11px;color:var(--ink3)">1 coin per ₹10 spent</div></div></div>
+      <div class="card" style="padding:14px;display:flex;align-items:center;gap:12px"><div style="width:40px;height:40px;background:var(--teal-l);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;font-size:18px">⭐</div><div style="flex:1"><div style="font-weight:700;font-size:13px">Write a review</div><div style="font-size:11px;color:var(--ink3)">50 coins per review</div></div></div>
+      <div class="card" style="padding:14px;display:flex;align-items:center;gap:12px"><div style="width:40px;height:40px;background:var(--purple-l);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;font-size:18px">👥</div><div style="flex:1"><div style="font-weight:700;font-size:13px">Refer a friend</div><div style="font-size:11px;color:var(--ink3)">200 coins per referral</div></div><button onclick="showToast('🔗 Referral link copied!')" class="btn btn-primary btn-sm">Share</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     PAGE: About
+     ============================================================ -->
+<div class="page" id="s-about">
+  <div style="background:linear-gradient(120deg,var(--coral),var(--teal));padding:60px 20px;text-align:center;color:#fff">
+    <div style="font-size:32px;font-weight:900;letter-spacing:-1px">navvyata</div>
+    <div style="font-size:14px;opacity:.85;margin-top:6px">newness for little ones</div>
+  </div>
+  <div class="section page-body" style="max-width:700px">
+    <div style="font-size:20px;font-weight:900;margin-bottom:12px">Our story</div>
+    <p style="font-size:14px;color:var(--ink2);line-height:1.8;margin-bottom:28px">Navvyata was born from a simple belief — every child deserves clothes that are as joyful, free, and full of life as they are. We design every piece with care, using skin-safe fabrics and vibrant prints that spark imagination.</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:28px">
+      <div style="background:var(--coral-l);border-radius:var(--radius);padding:18px;text-align:center"><div style="font-size:22px;font-weight:800;color:var(--coral)">50K+</div><div style="font-size:12px;color:var(--coral-d)">Happy families</div></div>
+      <div style="background:var(--teal-l);border-radius:var(--radius);padding:18px;text-align:center"><div style="font-size:22px;font-weight:800;color:var(--teal-d)">100%</div><div style="font-size:12px;color:var(--teal-d)">OEKO-TEX safe</div></div>
+      <div style="background:var(--sun-l);border-radius:var(--radius);padding:18px;text-align:center"><div style="font-size:22px;font-weight:800;color:var(--sun-d)">2L+</div><div style="font-size:12px;color:var(--sun-d)">Orders shipped</div></div>
+      <div style="background:var(--green-l);border-radius:var(--radius);padding:18px;text-align:center"><div style="font-size:22px;font-weight:800;color:var(--green-d)">🌿</div><div style="font-size:12px;color:var(--green-d)">Sustainable</div></div>
+    </div>
+    <button class="btn btn-primary" onclick="go('s-plp')">Shop the collection →</button>
+  </div>
+</div>
+
+<!-- ============================================================
+     PAGE: Blog Home
+     ============================================================ -->
+<div class="page" id="s-blog">
+  <div class="section page-body">
+    <div class="sec-head"><div><div class="sec-title">Blog</div><div class="sec-sub">Style guides, sizing tips and parenting ideas</div></div></div>
+    <div class="blog-list">
+      <div class="bcard featured" onclick="go('s-blog-article')">
+        <div class="bcard-img" style="background:linear-gradient(135deg,var(--coral-l),var(--sun-l));height:160px">☀️</div>
+        <div class="bcard-body"><div class="bcard-tag">Style guide</div><div class="bcard-title">5 summer outfits your kids will absolutely love in 2025</div><div class="bcard-meta">Navvyata Team · 5 min read</div></div>
+      </div>
+      <div class="bcard" onclick="go('s-blog-article')">
+        <div class="bcard-img" style="background:var(--teal-l);height:120px">📏</div>
+        <div class="bcard-body"><div class="bcard-tag">Sizing tips</div><div class="bcard-title">How to pick the right size every time</div><div class="bcard-meta">4 min read</div></div>
+      </div>
+      <div class="bcard" onclick="go('s-blog-article')">
+        <div class="bcard-img" style="background:var(--purple-l);height:120px">🎉</div>
+        <div class="bcard-body"><div class="bcard-tag">Occasions</div><div class="bcard-title">Diwali outfits — the 2025 festive edit</div><div class="bcard-meta">3 min read</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     PAGE: Blog Article
+     ============================================================ -->
+<div class="page" id="s-blog-article">
+  <div class="section page-body" style="max-width:720px">
+    <span class="pill p-c" style="margin-bottom:14px">Style guide</span>
+    <h1 style="font-size:26px;font-weight:900;line-height:1.2;margin-bottom:12px;color:var(--ink)">5 summer outfits your kids will absolutely love in 2025</h1>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:24px;color:var(--ink3);font-size:13px">
+      <div style="width:30px;height:30px;border-radius:50%;background:var(--coral);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff">NT</div>
+      Navvyata Team · 5 min read · Jun 28
+    </div>
+    <div style="height:220px;background:linear-gradient(135deg,var(--coral-l),var(--sun-l));border-radius:var(--radius-lg);display:flex;align-items:center;justify-content:center;font-size:72px;margin-bottom:24px">☀️</div>
+    <p style="font-size:14px;color:var(--ink2);line-height:1.8;margin-bottom:20px">Summer is here — and dressing kids for the heat while keeping them cute is an art. We've curated five best outfit combinations that are breathable, fun, and totally kid-approved.</p>
+    <h3 style="font-size:18px;font-weight:800;margin-bottom:10px">1. The Safari Explorer 🦁</h3>
+    <p style="font-size:14px;color:var(--ink2);line-height:1.8;margin-bottom:18px">Pair our Lion Safari Tee with lightweight denim shorts and a cap. Perfect for outdoor adventures or just a very enthusiastic afternoon in the park.</p>
+    <div style="background:var(--coral-l);border-radius:var(--radius);padding:16px;margin-bottom:24px">
+      <div style="font-size:12px;font-weight:700;color:var(--coral-d);margin-bottom:12px">🛍️ Shop this look</div>
+      <div style="display:flex;gap:12px">
+        <div onclick="go('s-pdp')" style="text-align:center;cursor:pointer"><div style="width:72px;height:72px;background:#fff;border-radius:var(--radius);display:flex;align-items:center;justify-content:center;font-size:28px;margin-bottom:6px">🦁</div><div style="font-size:11px;font-weight:700">Lion Tee</div><div style="font-size:12px;color:var(--coral);font-weight:800">₹499</div></div>
+        <div onclick="go('s-pdp')" style="text-align:center;cursor:pointer"><div style="width:72px;height:72px;background:#fff;border-radius:var(--radius);display:flex;align-items:center;justify-content:center;font-size:28px;margin-bottom:6px">🩳</div><div style="font-size:11px;font-weight:700">Denim Shorts</div><div style="font-size:12px;color:var(--coral);font-weight:800">₹449</div></div>
+        <div onclick="go('s-pdp')" style="text-align:center;cursor:pointer"><div style="width:72px;height:72px;background:#fff;border-radius:var(--radius);display:flex;align-items:center;justify-content:center;font-size:28px;margin-bottom:6px">🧢</div><div style="font-size:11px;font-weight:700">Fun Cap</div><div style="font-size:12px;color:var(--coral);font-weight:800">₹299</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     PAGE: Reviews (standalone)
+     ============================================================ -->
+<div class="page" id="s-reviews-page">
+  <div class="section page-body" style="max-width:700px">
+    <div style="font-size:20px;font-weight:900;margin-bottom:20px">Reviews · Lion Safari Tee</div>
+    <div class="review-grid">
+      <div class="review-card"><div class="review-top"><div class="review-avatar" style="background:var(--teal-l);color:var(--teal-d)">PR</div><div><div style="font-weight:700;font-size:13px">Priya R.</div><div style="color:var(--sun);font-size:12px">★★★★★</div></div><div style="margin-left:auto;font-size:11px;color:var(--ink3)">2 days ago</div></div><div style="font-size:13px;color:var(--ink2);line-height:1.7">My 5-year-old loves this! Soft and vibrant even after 10+ washes.</div></div>
+      <div class="review-card"><div class="review-top"><div class="review-avatar" style="background:var(--sun-l);color:var(--sun-d)">AM</div><div><div style="font-weight:700;font-size:13px">Amit M.</div><div style="color:var(--sun);font-size:12px">★★★★★</div></div><div style="margin-left:auto;font-size:11px;color:var(--ink3)">1 week ago</div></div><div style="font-size:13px;color:var(--ink2);line-height:1.7">Great quality. Sizing runs large — perfect for growing into. Fast delivery!</div></div>
+      <div class="review-card"><div class="review-top"><div class="review-avatar" style="background:var(--coral-l);color:var(--coral-d)">SK</div><div><div style="font-weight:700;font-size:13px">Sunita K.</div><div style="color:var(--sun);font-size:12px">★★★★★</div></div><div style="margin-left:auto;font-size:11px;color:var(--ink3)">2 weeks ago</div></div><div style="font-size:13px;color:var(--ink2);line-height:1.7">Colors exactly as shown. My daughter refuses to wear anything else! 😂</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     PAGE: New Arrivals
+     ============================================================ -->
+<div class="page" id="s-new-arrivals">
+  <div style="background:linear-gradient(135deg,var(--purple-l),var(--teal-l));padding:40px 20px 48px;text-align:center">
+    <span style="display:inline-block;background:white;color:var(--purple-d);font-size:11px;font-weight:700;padding:6px 14px;border-radius:50px;margin-bottom:14px;letter-spacing:.5px;text-transform:uppercase">Just dropped</span>
+    <div style="font-size:28px;font-weight:900;color:var(--ink);letter-spacing:-.5px;margin-bottom:6px">New Arrivals</div>
+    <div style="font-size:13px;color:var(--ink2)">Fresh styles added every week — be the first to grab them.</div>
+  </div>
+  <div class="section page-body">
+    <div class="sec-head" style="margin-bottom:16px">
+      <div style="display:flex;gap:8px;overflow-x:auto;padding-bottom:4px">
+        <div class="chip on">All new</div>
+        <div class="chip">Baby</div>
+        <div class="chip">Toddler</div>
+        <div class="chip">Kids</div>
+        <div class="chip">Tweens</div>
+      </div>
+    </div>
+    <!-- NEW badge on all cards here -->
+    <div class="grid-4" id="new-arrivals-grid"></div>
+  </div>
+</div>
+
+<!-- ============================================================
+     PAGE: Login
+     ============================================================ -->
+<div class="page" id="s-login">
+  <div style="max-width:400px;margin:0 auto;padding:60px 20px;text-align:center" class="page-body">
+    <div style="font-size:28px;font-weight:900;color:var(--coral);margin-bottom:6px">navvyata</div>
+    <div style="color:var(--ink3);margin-bottom:28px;font-size:13px">Sign in to continue</div>
+    <div class="field" style="text-align:left">
+      <label>Mobile number</label>
+      <div style="position:relative"><span style="position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:13px;font-weight:700;color:var(--ink2)">+91</span><input class="inp" style="padding-left:50px" placeholder="98765 43210"></div>
+    </div>
+    <button class="btn btn-primary btn-full" onclick="go('s-otp')" style="margin-bottom:16px">Send OTP →</button>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px"><div style="flex:1;height:1px;background:var(--border)"></div><span style="font-size:12px;color:var(--ink3)">or</span><div style="flex:1;height:1px;background:var(--border)"></div></div>
+    <button onclick="go('s-account')" style="width:100%;background:#fff;border:1.5px solid var(--border);border-radius:50px;padding:12px;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px"><span style="font-weight:900;color:#4285F4;font-size:15px">G</span>Continue with Google</button>
+  </div>
+</div>
+
+<!-- ============================================================
+     PAGE: OTP
+     ============================================================ -->
+<div class="page" id="s-otp">
+  <div style="max-width:400px;margin:0 auto;padding:60px 20px;text-align:center" class="page-body">
+    <div style="font-size:40px;margin-bottom:14px">📱</div>
+    <div style="font-size:20px;font-weight:800;margin-bottom:6px">Verify your number</div>
+    <div style="font-size:13px;color:var(--ink3);margin-bottom:24px">OTP sent to +91 98765 43210</div>
+    <div style="display:flex;gap:12px;justify-content:center;margin-bottom:24px">
+      <input value="4" maxlength="1" style="width:56px;height:56px;text-align:center;font-size:22px;font-weight:700;border:2px solid var(--coral);border-radius:var(--radius);outline:none">
+      <input value="2" maxlength="1" style="width:56px;height:56px;text-align:center;font-size:22px;font-weight:700;border:1.5px solid var(--border);border-radius:var(--radius);outline:none">
+      <input value="8" maxlength="1" style="width:56px;height:56px;text-align:center;font-size:22px;font-weight:700;border:1.5px solid var(--border);border-radius:var(--radius);outline:none">
+      <input value="9" maxlength="1" style="width:56px;height:56px;text-align:center;font-size:22px;font-weight:700;border:1.5px solid var(--border);border-radius:var(--radius);outline:none">
+    </div>
+    <button class="btn btn-primary btn-full" style="margin-bottom:12px" onclick="showToast('✅ Login successful!');go('s-account')">Verify and login</button>
+    <div style="font-size:12px;color:var(--ink3)">Didn't receive? <span style="color:var(--coral);cursor:pointer;font-weight:600" onclick="showToast('📱 OTP resent!')">Resend (00:28)</span></div>
+  </div>
+</div>
+
+<!-- ============================================================
+     COMPONENT: Footer (desktop)
+     ============================================================ -->
+<footer id="footer">
+  <div class="footer-inner">
+    <div class="footer-grid">
+      <div>
+        <div class="footer-logo">navvy<em>ata</em></div>
+        <div style="font-size:13px;color:rgba(255,255,255,.6);line-height:1.7;max-width:260px">Bringing joy to childhood, one outfit at a time. Designed for comfort, built to last.</div>
+      </div>
+      <div class="footer-col"><h4>Shop</h4><a onclick="go('s-plp')">Newborns</a><a onclick="go('s-plp')">Toddlers</a><a onclick="go('s-plp')">Kids</a><a onclick="go('s-plp')">Tweens</a><a onclick="go('s-sale')">Sale</a></div>
+      <div class="footer-col"><h4>Help</h4><a onclick="go('s-sizeguide')">Size Guide</a><a onclick="go('s-tracking')">Track Order</a><a onclick="go('s-returns')">Returns</a><a onclick="go('s-help')">FAQs</a></div>
+      <div class="footer-col"><h4>Company</h4><a onclick="go('s-about')">About Us</a><a onclick="go('s-blog')">Blog</a><a>Careers</a><a>Press</a></div>
+      <div class="footer-col"><h4>Account</h4><a onclick="go('s-account')">My Account</a><a onclick="go('s-wishlist')">Wishlist</a><a onclick="go('s-rewards')">Rewards</a><a onclick="go('s-login')">Sign in</a></div>
+    </div>
+    <div class="footer-bottom">
+      <div>© 2025 Navvyata. Made with ❤️ for little ones everywhere.</div>
+      <div class="footer-badges"><span class="fbadge">UPI</span><span class="fbadge">Visa</span><span class="fbadge">Mastercard</span><span class="fbadge">COD</span></div>
+    </div>
+  </div>
+</footer>
+
+
+<script>
+/* ============================================================
+   STATE
+   ============================================================ */
+var cart=[], cartTotal=0, pdpQty=1, selSize=null, wished=false, hist=[], tv=8073;
+
+/* ============================================================
+   PRODUCT DATA
+   → In Next.js this becomes: /data/products.js or an API call
+   ============================================================ */
+var prods=[
+  {e:'🦁',n:'Lion Safari Tee',    a:'4–8 yrs', p:'₹499', o:'₹799', am:499, bg:'var(--coral-l)', tag:'🔥 Hot', tc:'p-c'},
+  {e:'🌸',n:'Floral Summer Dress', a:'3–7 yrs', p:'₹749', am:749,  bg:'var(--teal-l)',  tag:'New',    tc:'p-t'},
+  {e:'🚀',n:'Space Explorer Set',  a:'6–10 yrs',p:'₹999', o:'₹1,499',am:999, bg:'var(--sun-l)', tag:'Sale',   tc:'p-s'},
+  {e:'🌟',n:'Sparkle Jogger Set',  a:'10–14 yrs',p:'₹1,199',am:1199,bg:'var(--purple-l)',tag:'New',   tc:'p-p'},
+  {e:'🦊',n:'Fox Print Romper',    a:'0–12m',   p:'₹599', am:599,  bg:'var(--coral-l)', tag:'New',    tc:'p-t'},
+  {e:'🌊',n:'Ocean Shorts',        a:'5–9 yrs', p:'₹349', o:'₹549',am:349,  bg:'var(--teal-l)', tag:'Sale',   tc:'p-c'},
+];
+
+/* ============================================================
+   COMPONENT: ProductCard renderer
+   → In Next.js this becomes: <ProductCard product={p} />
+   ============================================================ */
+function prodCard(p, opts){
+  opts = opts||{};
+  return '<div class="pcard" onclick="go(\'s-pdp\')">'
+    +'<div class="pimg"><div class="pimg-inner" style="background:'+p.bg+'">'
+    +p.e
+    +(p.tag?'<span class="pill '+p.tc+' pcard-pill">'+p.tag+'</span>':'')
+    +'<button class="pcard-wish" onclick="event.stopPropagation();showToast(\'❤️ Added to wishlist!\')">🤍</button>'
+    +'<button class="pcard-hover-btn" onclick="addCart(event,\''+p.e+'\',\''+p.n+'\',\'Standard\',\''+p.p+'\','+p.am+',\''+p.bg+'\')">+ Quick add to cart</button>'
+    +'</div></div>'
+    +'<div class="pbody">'
+    +'<div class="pcard-name">'+p.n+'</div>'
+    +'<div class="pcard-age">'+p.a+'</div>'
+    +'<div class="pcard-foot">'
+    +'<div><span class="pcard-price">'+p.p+'</span>'+(p.o?'<span class="pcard-old">'+p.o+'</span>':'')+'</div>'
+    +'<span class="pcard-stars">★★★★★</span>'
+    +'</div></div></div>';
+}
+
+function renderGrids(){
+  var g=document.getElementById('home-grid');
+  if(g) g.innerHTML=prods.map(prodCard).join('');
+  var pg=document.getElementById('plp-grid');
+  if(pg) pg.innerHTML=(prods.concat(prods)).map(prodCard).join('');
+  var sg=document.getElementById('sale-grid');
+  if(sg) sg.innerHTML=prods.map(prodCard).join('');
+  var wg=document.getElementById('wish-grid');
+  if(wg) wg.innerHTML=[prods[0],prods[3],prods[5],prods[2]].map(prodCard).join('');
+  // New arrivals — tag all as New
+  var nag=document.getElementById('new-arrivals-grid');
+  if(nag) nag.innerHTML=prods.map(function(p){
+    return prodCard(Object.assign({},p,{tag:'New',tc:'p-t'}));
+  }).join('');
+  // drawer upsell
+  var du=document.getElementById('drawer-upsell');
+  if(du) du.innerHTML=[
+    {e:'🧢',n:'Fun Cap',am:299,bg:'var(--sun-l)'},
+    {e:'🩳',n:'Denim Shorts',am:449,bg:'var(--teal-l)'}
+  ].map(function(u){
+    return '<div onclick="addCart(event,\''+u.e+'\',\''+u.n+'\',\'One size\',\'₹'+u.am+'\','+u.am+',\''+u.bg+'\')" style="display:flex;gap:12px;align-items:center;cursor:pointer;padding:8px;border-radius:var(--radius);margin-bottom:6px;transition:background .15s" onmouseover="this.style.background=\'var(--bg)\'" onmouseout="this.style.background=\'none\'">'
+      +'<div style="width:46px;height:46px;background:'+u.bg+';border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;font-size:20px">'+u.e+'</div>'
+      +'<div style="flex:1"><div style="font-size:13px;font-weight:700;color:var(--ink)">'+u.n+'</div><div style="font-size:12px;color:var(--coral);font-weight:700">₹'+u.am+'</div></div>'
+      +'<span style="font-size:12px;color:var(--coral);font-weight:700">+ Add</span></div>';
+  }).join('');
+}
+renderGrids();
+
+/* ============================================================
+   ROUTER: go(pageId)
+   → In Next.js this becomes: router.push('/page')
+   ============================================================ */
+var navMap={
+  's-home':'nl-home','s-plp':'nl-shop','s-new-arrivals':'nl-new','s-sale':'nl-sale',
+  's-blog':'nl-blog','s-blog-article':'nl-blog','s-about':'nl-about'
+};
+var bnMap={
+  's-home':0,'s-plp':1,'s-search':2,'s-cart':3,'s-account':4
+};
+
+function go(id){
+  var cur=document.querySelector('.page.active');
+  if(cur && cur.id!==id) hist.push(cur.id);
+  document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active')});
+  var t=document.getElementById(id);
+  if(t){ t.classList.add('active'); window.scrollTo({top:0,behavior:'instant'}); }
+
+  // highlight nav links
+  document.querySelectorAll('.nav-links a').forEach(function(a){a.classList.remove('active')});
+  if(navMap[id]){ var nl=document.getElementById(navMap[id]); if(nl) nl.classList.add('active'); }
+
+  // highlight bottom nav
+  document.querySelectorAll('.bni').forEach(function(b){b.classList.remove('on')});
+  if(bnMap[id]!==undefined){
+    var bns=document.querySelectorAll('.bni');
+    if(bns[bnMap[id]]) bns[bnMap[id]].classList.add('on');
+  }
+
+  updateBadges();
+  if(id==='s-cart') renderCart();
+  if(id==='s-checkout-addr'||id==='s-checkout-pay') syncTotals();
+}
+
+function goBack(){
+  if(hist.length>0){ var p=hist.pop(); go(p); if(hist.length>0) hist.pop(); }
+  else go('s-home');
+}
+
+/* ============================================================
+   CART LOGIC
+   → In Next.js: useCart() hook or Zustand/Context store
+   ============================================================ */
+function addCart(e, em, nm, mt, pr, am, bg){
+  if(e) e.stopPropagation();
+  var ex=cart.find(function(i){return i.name===nm});
+  if(ex){ ex.qty++; } else { cart.push({emoji:em,name:nm,meta:mt,price:pr,amount:am,bg:bg,qty:1}); }
+  cartTotal+=am;
+  updateBadges();
+  openCD(em, nm, mt, pr, bg);
+}
+
+function pdpAdd(){
+  if(!selSize){
+    document.getElementById('szerr').style.display='inline';
+    showToast('⚠️ Please select a size first');
+    return;
+  }
+  document.getElementById('szerr').style.display='none';
+  var col=document.getElementById('selcol').textContent;
+  addCart(null,'🦁','Lion Safari Tee','Size: '+selSize+' · '+col,'₹'+(499*pdpQty),499*pdpQty,'var(--coral-l)');
+}
+
+function openCD(em, nm, mt, pr, bg){
+  document.getElementById('dimg').textContent=em;
+  document.getElementById('dimg').style.background=bg;
+  document.getElementById('dname').textContent=nm;
+  document.getElementById('dmeta').textContent=mt;
+  document.getElementById('dprice').textContent=pr;
+  var r=999-cartTotal;
+  document.getElementById('dship').textContent=r>0?'🚚 Add ₹'+r+' more for free shipping':'🎉 Free shipping unlocked!';
+  document.getElementById('cdrawer').classList.add('open');
+}
+function closeCD(){ document.getElementById('cdrawer').classList.remove('open'); }
+
+function renderCart(){
+  var empty=document.getElementById('cempty');
+  var items=document.getElementById('citems');
+  var sumbox=document.getElementById('summary-box');
+  var upsell=document.getElementById('upsell-wrap');
+  var title=document.getElementById('cart-title');
+  if(!cart.length){
+    empty.style.display='block'; items.innerHTML='';
+    sumbox.style.display='none'; upsell.style.display='none';
+    title.textContent='Your cart'; return;
+  }
+  empty.style.display='none';
+  sumbox.style.display='block'; upsell.style.display='block';
+  var tq=cart.reduce(function(s,i){return s+i.qty},0);
+  title.textContent='Your cart ('+tq+' item'+(tq!==1?'s':'')+')';
+  items.innerHTML=cart.map(function(it,i){
+    return '<div class="cart-item">'
+      +'<div class="cart-item-img" style="background:'+it.bg+'">'+it.emoji+'</div>'
+      +'<div style="flex:1">'
+      +'<div style="font-size:15px;font-weight:700;color:var(--ink);margin-bottom:3px">'+it.name+'</div>'
+      +'<div style="font-size:12px;color:var(--ink3);margin-bottom:10px">'+it.meta+'</div>'
+      +'<div style="display:flex;align-items:center;gap:14px">'
+      +'<div class="cart-qty-row"><button class="cqb" onclick="cq('+i+',-1)">−</button>'
+      +'<span style="font-size:14px;font-weight:700;min-width:18px;text-align:center">'+it.qty+'</span>'
+      +'<button class="cqb" onclick="cq('+i+',1)">+</button></div>'
+      +'<span style="font-size:15px;font-weight:800;color:var(--coral)">₹'+(it.amount*it.qty).toLocaleString()+'</span>'
+      +'<button onclick="rm('+i+')" style="background:none;border:none;color:var(--ink3);cursor:pointer;font-size:12px;font-weight:600;margin-left:auto">🗑️ Remove</button>'
+      +'</div></div></div>';
+  }).join('');
+  var disc=Math.min(300,cartTotal);
+  document.getElementById('sitemlbl').textContent='Items ('+tq+')';
+  document.getElementById('ssub').textContent='₹'+cartTotal.toLocaleString();
+  document.getElementById('sdisc').textContent='−₹'+disc;
+  document.getElementById('stotal').textContent='₹'+Math.max(0,cartTotal-disc).toLocaleString();
+}
+
+function cq(i, d){
+  cart[i].qty+=d;
+  if(cart[i].qty<=0){ cartTotal-=cart[i].amount; cart.splice(i,1); }
+  else cartTotal+=cart[i].amount*d;
+  if(cartTotal<0) cartTotal=0;
+  updateBadges(); renderCart();
+}
+
+function rm(i){
+  cartTotal-=cart[i].amount*cart[i].qty;
+  if(cartTotal<0) cartTotal=0;
+  cart.splice(i,1); updateBadges(); renderCart();
+}
+
+function applyCoupon(){
+  var v=document.getElementById('cinp').value.trim().toUpperCase();
+  showToast(v==='NAVVY20'||v==='NAVVY10'?'🎁 Coupon applied! Discount added.':'❌ Invalid code. Try NAVVY20');
+}
+
+function syncTotals(){
+  var disc=Math.min(300,cartTotal);
+  var tot='₹'+Math.max(0,cartTotal-disc).toLocaleString();
+  ['cototal','paytotal'].forEach(function(id){ var e=document.getElementById(id); if(e) e.textContent=tot; });
+  var pb=document.getElementById('paybtn');
+  if(pb) pb.textContent='Pay '+tot+' →';
+}
+
+function placeOrder(){ cart=[]; cartTotal=0; updateBadges(); go('s-confirm'); }
+
+function updateBadges(){
+  var n=cart.reduce(function(s,i){return s+i.qty},0);
+  var txt=n?String(n):'';
+  ['navbadge','bnbadge'].forEach(function(id){
+    var el=document.getElementById(id);
+    if(!el) return;
+    el.textContent=txt;
+    el.style.display=n?'flex':'none';
+  });
+}
+
+/* ============================================================
+   PDP INTERACTIONS
+   ============================================================ */
+function selSz(el){
+  document.querySelectorAll('#szchips .pdp-size').forEach(function(c){c.classList.remove('on')});
+  el.classList.add('on'); selSize=el.textContent;
+  document.getElementById('szerr').style.display='none';
+}
+
+function selCol(el, name){
+  document.querySelectorAll('#colrow .pdp-color').forEach(function(d){d.classList.remove('on')});
+  el.classList.add('on');
+  document.getElementById('selcol').textContent=name;
+}
+
+function chQty(d){ pdpQty=Math.max(1,Math.min(10,pdpQty+d)); document.getElementById('pdpqty').textContent=pdpQty; }
+
+function switchImg(el, em, bg){
+  document.querySelectorAll('.pdp-thumb').forEach(function(t){t.classList.remove('on')});
+  el.classList.add('on');
+  var img=document.getElementById('pdpimg');
+  img.textContent=em; img.style.background=bg;
+}
+
+function toggleWish(){
+  wished=!wished;
+  var ico=wished?'❤️':'🤍';
+  var e=document.getElementById('wcta'); if(e) e.textContent=ico;
+  showToast(wished?'❤️ Added to wishlist!':'💔 Removed from wishlist');
+}
+
+/* ============================================================
+   SEARCH
+   ============================================================ */
+function liveSearch(q){
+  // sync both inputs
+  ['sinp','search-inp'].forEach(function(id){
+    var el=document.getElementById(id);
+    if(el && el.value!==q) el.value=q;
+  });
+  var sd=document.getElementById('sdef'), sr=document.getElementById('sres');
+  if(!q.trim()){ if(sd) sd.style.display='block'; if(sr) sr.style.display='none'; return; }
+  go('s-search');
+  if(sd) sd.style.display='none'; if(sr) sr.style.display='block';
+  var m=prods.filter(function(p){ return p.n.toLowerCase().indexOf(q.toLowerCase())>-1; });
+  var g=document.getElementById('sgrid');
+  if(!g) return;
+  if(!m.length){ g.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:48px;color:var(--ink3);font-size:14px">😕 No results for "'+q+'"</div>'; return; }
+  g.innerHTML=m.map(prodCard).join('');
+}
+
+function searchFor(q){
+  ['sinp','search-inp'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=q; });
+  liveSearch(q);
+}
+
+/* ============================================================
+   FAQ ACCORDION
+   ============================================================ */
+function toggleFAQ(el){
+  var a=el.nextElementSibling;
+  if(!a) return;
+  var open=a.style.display==='block';
+  a.style.display=open?'none':'block';
+  var arr=el.querySelector('span:last-child');
+  if(arr) arr.textContent=open?'›':'∨';
+}
+
+/* ============================================================
+   CHIP TOGGLE (generic)
+   ============================================================ */
+document.addEventListener('click',function(e){
+  if(e.target.classList.contains('chip') && !e.target.closest('#szchips')){
+    var p=e.target.parentElement;
+    p.querySelectorAll('.chip').forEach(function(c){c.classList.remove('on')});
+    e.target.classList.add('on');
+  }
+});
+
+/* ============================================================
+   TOAST
+   ============================================================ */
+function showToast(msg){
+  var t=document.getElementById('toast');
+  document.getElementById('tmsg').textContent=msg;
+  t.classList.add('show');
+  clearTimeout(t._t);
+  t._t=setTimeout(function(){ t.classList.remove('show'); }, 2600);
+}
+
+/* ============================================================
+   SOCIAL PROOF TICKER
+   → Rotates real-feeling purchase notifications
+   ============================================================ */
+var spMsgs=[
+  'Priya from Pune just bought Lion Safari Tee (4–5Y)',
+  'Rahul from Delhi added Sparkle Joggers to cart',
+  'Sneha from Mumbai just bought Fox Print Romper (0–6M)',
+  'Ananya from Bangalore bought Floral Summer Dress (3–4Y)',
+  '47 people bought from Navvyata in the last 2 hours',
+  'Kavita from Hyderabad just bought Space Explorer Set',
+  'Meera from Chennai added 3 items to cart',
+  'Raj from Nagpur just bought Ocean Shorts (5–6Y)',
+];
+var spIdx=0;
+setInterval(function(){
+  var el=document.getElementById('sp-msg');
+  if(!el) return;
+  el.style.opacity='0';
+  setTimeout(function(){
+    spIdx=(spIdx+1)%spMsgs.length;
+    el.textContent=spMsgs[spIdx];
+    el.style.opacity='1';
+  },400);
+},4000);
+
+/* ============================================================
+   SIZE CALCULATOR
+   → Parent enters age/height → gets recommended size
+   ============================================================ */
+function calcSize(){
+  var age=parseFloat(document.getElementById('child-age-inp').value)||0;
+  var ht=parseFloat(document.getElementById('child-ht-inp').value)||0;
+  var rec='';
+  if(ht>=122) rec='6–7Y';
+  else if(ht>=116) rec='5–6Y';
+  else if(ht>=110) rec='4–5Y';
+  else if(ht>=104) rec='3–4Y';
+  else if(age>=6) rec='5–6Y';
+  else if(age>=5) rec='4–5Y';
+  else if(age>=4) rec='3–4Y';
+  else if(age>=3) rec='3–4Y';
+  else rec='Check baby sizes';
+  var rEl=document.getElementById('size-rec');
+  if(rEl){
+    rEl.textContent='✅ Recommended size: '+rec+' — based on '+(ht?'height '+ht+'cm':'age '+age+'yrs');
+    rEl.style.display='block';
+    // Auto-select that size
+    document.querySelectorAll('#szchips .pdp-size').forEach(function(s){
+      if(s.textContent.trim()===rec){ selSz(s); }
+    });
+  }
+}
+
+/* ============================================================
+   TESTIMONIALS — responsive grid
+   ============================================================ */
+function updateTestimonialsLayout(){
+  var g=document.getElementById('testimonials-grid');
+  if(!g) return;
+  g.style.gridTemplateColumns=window.innerWidth>=768?'repeat(3,1fr)':'1fr';
+}
+updateTestimonialsLayout();
+window.addEventListener('resize',updateTestimonialsLayout);
+
+/* ============================================================
+   COUNTDOWN TIMER
+   ============================================================ */
+setInterval(function(){
+  tv--; if(tv<0) tv=86400;
+  var h=Math.floor(tv/3600).toString().padStart(2,'0');
+  var m=Math.floor((tv%3600)/60).toString().padStart(2,'0');
+  var s=(tv%60).toString().padStart(2,'0');
+  var el=document.getElementById('timer');
+  if(el) el.textContent=h+':'+m+':'+s;
+},1000);
+
+/* ============================================================
+   INIT
+   Desktop (≥1024px): skip splash, land on Home directly
+   Mobile (<1024px): show splash, hide chrome until user taps through
+   ============================================================ */
+var splashActive = false;
+
+function showChrome(visible){
+  ['ann-bar','navbar','bottom-nav'].forEach(function(id){
+    var el=document.getElementById(id);
+    if(!el) return;
+    if(id==='bottom-nav'){
+      // bottom nav only on mobile anyway
+      el.style.display = visible && window.innerWidth<768 ? 'grid' : '';
+    } else {
+      el.style.display = visible ? '' : 'none';
+    }
+  });
+}
+
+// Wrap go to restore chrome when leaving splash
+var _go = go;
+go = function(id){
+  if(splashActive && id !== 's-splash'){
+    splashActive = false;
+    showChrome(true);
+  }
+  _go(id);
+};
+
+function init(){
+  updateBadges();
+  if(window.innerWidth >= 1024){
+    // Desktop: go straight to home, no splash
+    _go('s-home');
+  } else {
+    // Mobile: splash first, hide nav chrome
+    splashActive = true;
+    showChrome(false);
+    _go('s-splash');
+  }
+}
+
+init();
+</script>
+</body>
+</html>

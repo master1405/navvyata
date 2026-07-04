@@ -1,0 +1,133 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id            Int            @id @default(autoincrement())
+  phone         String         @unique
+  coins         Int            @default(0)
+  createdAt     DateTime       @default(now())
+  addresses     UserAddress[]
+  childProfiles ChildProfile[]
+  orders        Order[]
+}
+
+model UserAddress {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  name      String
+  phone     String
+  address   String
+  pincode   String
+  city      String
+  state     String
+  type      String   // "Home", "Office", "Other"
+  isDefault Boolean  @default(false)
+}
+
+model ChildProfile {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  name      String
+  age       Int
+  height    Float?
+  size      String?
+  isDefault Boolean  @default(false)
+}
+
+model Product {
+  id          Int                  @id @default(autoincrement())
+  emoji       String
+  name        String
+  ageRange    String
+  price       Int
+  oldPrice    Int?
+  bg          String
+  tag         String?
+  tagClass    String?
+  description String?
+  isFeatured  Boolean              @default(false)
+  isSale      Boolean              @default(false)
+  isNew       Boolean              @default(false)
+  sizes       ProductSizeStock[]
+  reviews     Review[]
+  orderItems  OrderItem[]
+}
+
+model ProductSizeStock {
+  id        Int     @id @default(autoincrement())
+  productId Int
+  product   Product @relation(fields: [productId], references: [id])
+  size      String  // "3–4Y", "4–5Y", "5–6Y", etc.
+  stock     Int     @default(0)
+}
+
+model Coupon {
+  id           Int     @id @default(autoincrement())
+  code         String  @unique
+  discountPct  Int     @default(0)
+  discountAmt  Int     @default(0)
+  minOrderVal  Int     @default(0)
+  active       Boolean @default(true)
+}
+
+model Order {
+  id          String      @id // e.g. "NVY-2025-08471"
+  userId      Int
+  user        User        @relation(fields: [userId], references: [id])
+  createdAt   DateTime    @default(now())
+  status      String      @default("Confirmed") // "Confirmed", "Shipped", "Delivered", "Returned"
+  subtotal    Int
+  discount    Int
+  shipping    Int
+  total       Int
+  payMethod   String
+  addressName String
+  addressText String
+  estDelivery String
+  items       OrderItem[]
+}
+
+model OrderItem {
+  id        Int     @id @default(autoincrement())
+  orderId   String
+  order     Order   @relation(fields: [orderId], references: [id])
+  productId Int
+  product   Product @relation(fields: [productId], references: [id])
+  name      String
+  emoji     String
+  size      String
+  color     String
+  price     Int
+  qty       Int
+  bg        String
+}
+
+model Review {
+  id        Int      @id @default(autoincrement())
+  productId Int
+  product   Product  @relation(fields: [productId], references: [id])
+  userName  String
+  avatarBg  String
+  avatarFg  String
+  rating    Int
+  comment   String
+  createdAt DateTime @default(now())
+}
+
+model BlogPost {
+  id        Int      @id @default(autoincrement())
+  title     String
+  tag       String
+  readTime  String
+  content   String
+  emoji     String
+  createdAt DateTime @default(now())
+}
