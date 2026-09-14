@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useCart } from "@/app/context/CartContext";
+import { INDIAN_STATES } from "@/app/lib/constants";
 
 export default function CheckoutAddressPage() {
   const router = useRouter();
@@ -25,6 +26,7 @@ export default function CheckoutAddressPage() {
   const [city, setCity] = useState("");
   const [stateName, setStateName] = useState("");
   const [addrType, setAddrType] = useState("Home");
+  const [formErrors, setFormErrors] = useState({});
 
   // Redirect to account login if user not logged in
   useEffect(() => {
@@ -38,10 +40,41 @@ export default function CheckoutAddressPage() {
     }
   }, [user]);
 
+  /**
+   * Strict validation for Indian logistics:
+   * - 6-digit postal code (PIN)
+   * - 10-digit mobile number starting with 6-9
+   * - City name (alphabetic, spaces, hyphens)
+   * - State selected from predefined list of 28 states & 8 UTs
+   */
+  const validateForm = () => {
+    const errs = {};
+    if (!name.trim() || name.trim().length < 3) {
+      errs.name = "Enter your full name (minimum 3 characters)";
+    }
+    if (!/^[6-9]\d{9}$/.test(phone.trim())) {
+      errs.phone = "Enter a valid 10-digit Indian mobile number";
+    }
+    if (!addressLine.trim() || addressLine.trim().length < 5) {
+      errs.address = "Enter flat, house number, building & street";
+    }
+    if (!/^[1-9][0-9]{5}$/.test(pincode.trim())) {
+      errs.pincode = "Enter a valid 6-digit postal pincode";
+    }
+    if (!city.trim() || !/^[a-zA-Z\s.-]{2,50}$/.test(city.trim())) {
+      errs.city = "Enter a valid city name (letters only)";
+    }
+    if (!stateName.trim()) {
+      errs.state = "Please select your state / union territory";
+    }
+    setFormErrors(errs);
+    return Object.keys(errs).length === 0;
+  };
+
   const handleSaveAddress = async (e) => {
     e.preventDefault();
-    if (!name.trim() || !phone.trim() || !addressLine.trim() || !pincode.trim() || !city.trim() || !stateName.trim()) {
-      showToast("⚠️ Please fill out all fields");
+    if (!validateForm()) {
+      showToast("⚠️ Please correct the errors in the address form");
       return;
     }
 
@@ -50,12 +83,12 @@ export default function CheckoutAddressPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name,
-          phone,
-          address: addressLine,
-          pincode,
-          city,
-          state: stateName,
+          name: name.trim(),
+          phone: phone.trim(),
+          address: addressLine.trim(),
+          pincode: pincode.trim(),
+          city: city.trim(),
+          state: stateName.trim(),
           type: addrType,
         }),
       });
@@ -63,6 +96,7 @@ export default function CheckoutAddressPage() {
       if (res.ok && data.success) {
         showToast("✅ Address saved!");
         await refreshUserProfile();
+        setActiveAddressId(data.address.id);
         // Clear inputs
         setName("");
         setPhone("");
@@ -71,6 +105,7 @@ export default function CheckoutAddressPage() {
         setCity("");
         setStateName("");
         setAddrType("Home");
+        setFormErrors({});
         setShowForm(false);
       } else {
         showToast("❌ " + (data.error || "Failed to save address"));
@@ -188,31 +223,94 @@ export default function CheckoutAddressPage() {
             <form onSubmit={handleSaveAddress}>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
                 <div className="field">
-                  <label>Full name</label>
-                  <input className="inp" placeholder="e.g. Priya Sharma" value={name} onChange={(e) => setName(e.target.value)} />
+                  <label>Full name *</label>
+                  <input
+                    className="inp"
+                    placeholder="e.g. Priya Sharma"
+                    value={name}
+                    onChange={(e) => {
+                      setName(e.target.value);
+                      if (formErrors.name) setFormErrors((p) => ({ ...p, name: null }));
+                    }}
+                  />
+                  {formErrors.name && <div style={{ color: "#e53e3e", fontSize: "11px", marginTop: "3px" }}>{formErrors.name}</div>}
                 </div>
                 <div className="field">
-                  <label>Phone</label>
-                  <input className="inp" placeholder="e.g. 9876543210" value={phone} onChange={(e) => setPhone(e.target.value)} />
+                  <label>Mobile phone *</label>
+                  <input
+                    className="inp"
+                    placeholder="10-digit number"
+                    maxLength="10"
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => {
+                      setPhone(e.target.value.replace(/\D/g, ""));
+                      if (formErrors.phone) setFormErrors((p) => ({ ...p, phone: null }));
+                    }}
+                  />
+                  {formErrors.phone && <div style={{ color: "#e53e3e", fontSize: "11px", marginTop: "3px" }}>{formErrors.phone}</div>}
                 </div>
               </div>
               <div className="field">
-                <label>Address</label>
-                <input className="inp" placeholder="Flat, building, street, area" value={addressLine} onChange={(e) => setAddressLine(e.target.value)} />
+                <label>Address (Flat, building, street, area) *</label>
+                <input
+                  className="inp"
+                  placeholder="Flat, building, street, area"
+                  value={addressLine}
+                  onChange={(e) => {
+                    setAddressLine(e.target.value);
+                    if (formErrors.address) setFormErrors((p) => ({ ...p, address: null }));
+                  }}
+                />
+                {formErrors.address && <div style={{ color: "#e53e3e", fontSize: "11px", marginTop: "3px" }}>{formErrors.address}</div>}
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
                 <div className="field">
-                  <label>Pincode</label>
-                  <input className="inp" placeholder="e.g. 440010" value={pincode} onChange={(e) => setPincode(e.target.value)} />
+                  <label>Pincode *</label>
+                  <input
+                    className="inp"
+                    placeholder="e.g. 440010"
+                    maxLength="6"
+                    value={pincode}
+                    onChange={(e) => {
+                      setPincode(e.target.value.replace(/\D/g, ""));
+                      if (formErrors.pincode) setFormErrors((p) => ({ ...p, pincode: null }));
+                    }}
+                  />
+                  {formErrors.pincode && <div style={{ color: "#e53e3e", fontSize: "11px", marginTop: "3px" }}>{formErrors.pincode}</div>}
                 </div>
                 <div className="field">
-                  <label>City</label>
-                  <input className="inp" placeholder="e.g. Nagpur" value={city} onChange={(e) => setCity(e.target.value)} />
+                  <label>City *</label>
+                  <input
+                    className="inp"
+                    placeholder="e.g. Nagpur"
+                    value={city}
+                    onChange={(e) => {
+                      setCity(e.target.value);
+                      if (formErrors.city) setFormErrors((p) => ({ ...p, city: null }));
+                    }}
+                  />
+                  {formErrors.city && <div style={{ color: "#e53e3e", fontSize: "11px", marginTop: "3px" }}>{formErrors.city}</div>}
                 </div>
               </div>
               <div className="field">
-                <label>State</label>
-                <input className="inp" placeholder="e.g. Maharashtra" value={stateName} onChange={(e) => setStateName(e.target.value)} />
+                <label>State / Union Territory *</label>
+                <select
+                  className="inp"
+                  value={stateName}
+                  onChange={(e) => {
+                    setStateName(e.target.value);
+                    if (formErrors.state) setFormErrors((p) => ({ ...p, state: null }));
+                  }}
+                >
+                  <option value="">-- Select State / UT --</option>
+                  {INDIAN_STATES.map((st) => (
+                    <option key={st} value={st}>
+                      {st}
+                    </option>
+                  ))}
+                </select>
+                {formErrors.state && <div style={{ color: "#e53e3e", fontSize: "11px", marginTop: "3px" }}>{formErrors.state}</div>}
               </div>
               <div className="field">
                 <label>Type</label>

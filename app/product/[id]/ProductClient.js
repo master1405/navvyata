@@ -4,9 +4,10 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useCart } from "@/app/context/CartContext";
 import ProductCard from "@/app/components/ProductCard";
+import { getRecommendedSize } from "@/app/lib/constants";
 
 export default function ProductClient({ product, completeLook }) {
-  const { addToCart, toggleWishlist, wishlist, showToast } = useCart();
+  const { addToCart, toggleWishlist, wishlist, showToast, user } = useCart();
 
   // Selected State
   const [selectedSize, setSelectedSize] = useState(null);
@@ -46,33 +47,57 @@ export default function ProductClient({ product, completeLook }) {
     { emoji: "⭐", bg: "var(--sun-l)" },
   ];
 
-  // Sizing calculator algorithm
+  /**
+   * Pediatric Sizing Calculation Engine:
+   * Uses WHO growth standards from getRecommendedSize() covering 0M to 14Y.
+   */
   const handleCalcSize = () => {
-    const age = parseFloat(calcAge) || 0;
-    const ht = parseFloat(calcHeight) || 0;
-    let rec = "";
+    if (!calcAge && !calcHeight) {
+      showToast("⚠️ Please enter your child's age or height");
+      return;
+    }
 
-    if (ht >= 122) rec = "7–8Y";
-    else if (ht >= 116) rec = "5–6Y";
-    else if (ht >= 110) rec = "4–5Y";
-    else if (ht >= 104) rec = "3–4Y";
-    else if (age >= 6) rec = "5–6Y";
-    else if (age >= 5) rec = "4–5Y";
-    else if (age >= 4) rec = "3–4Y";
-    else if (age >= 3) rec = "3–4Y";
-    else rec = "Check baby sizes";
-
+    const rec = getRecommendedSize(calcAge, calcHeight);
     setCalculatedSizeRec(rec);
 
-    // Auto-select the size if it's available in the list
-    const foundSize = product.sizes?.find((sz) => sz.size.trim() === rec);
+    // Auto-match against product available stock sizes
+    const foundSize = product.sizes?.find((sz) => sz.size.trim() === rec || sz.size.includes(rec));
     if (foundSize && foundSize.stock > 0) {
-      setSelectedSize(rec);
+      setSelectedSize(foundSize.size);
       setSizeError(false);
-      showToast(`✅ Recommended size ${rec} auto-selected!`);
+      showToast(`✅ Recommended size ${foundSize.size} applied!`);
+    } else if (foundSize && foundSize.stock <= 0) {
+      showToast(`⚠️ Recommended size ${foundSize.size} is out of stock`);
     } else {
       showToast(`💡 Recommended size: ${rec}`);
     }
+  };
+
+  /**
+   * 1-Click Child Profile Size Selection
+   */
+  const handleSelectChildProfile = (child) => {
+    const targetSize = child.size;
+    const matching = product.sizes?.find((sz) => sz.size.trim() === targetSize || sz.size.includes(targetSize));
+    if (matching && matching.stock > 0) {
+      setSelectedSize(matching.size);
+      setSizeError(false);
+      showToast(`✅ Selected size ${matching.size} for ${child.name}`);
+    } else if (matching && matching.stock <= 0) {
+      showToast(`⚠️ Size ${targetSize} for ${child.name} is currently out of stock`);
+    } else {
+      showToast(`ℹ️ Product does not carry size ${targetSize} for ${child.name}`);
+    }
+  };
+
+  /**
+   * Real WhatsApp Consultation Redirect:
+   * Opens direct chat with customer support with product and sizing context.
+   */
+  const handleWhatsAppConsult = () => {
+    const message = `Hi Navvyata Team! I would like size and styling advice for "${product.name}" (Item #${product.id}, Price: ₹${product.price}). Can you help recommend the best fit?`;
+    const whatsappUrl = `https://wa.me/919876543210?text=${encodeURIComponent(message)}`;
+    window.open(whatsappUrl, "_blank", "noopener,noreferrer");
   };
 
   const handleAddToCart = () => {
@@ -192,37 +217,85 @@ export default function ProductClient({ product, completeLook }) {
               <div style={{ fontSize: "11px", color: "var(--ink3)" }}>94% agree</div>
             </div>
 
-            <div style={{ background: "var(--teal-l)", borderRadius: "var(--radius-sm)", padding: "12px 14px", marginBottom: "12px" }}>
-              <div style={{ fontSize: "12px", fontWeight: "700", color: "var(--teal-d)", marginBottom: "8px" }}>
-                🔢 Find your child's size
+            {/* Sizing Recommendations & Calculator */}
+            <div style={{ background: "var(--teal-l)", borderRadius: "var(--radius-sm)", padding: "14px", marginBottom: "16px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                <span style={{ fontSize: "13px", fontWeight: "700", color: "var(--teal-d)" }}>
+                  🔢 Find your child's size
+                </span>
+                <Link href="/sizeguide" style={{ fontSize: "11px", color: "var(--teal-d)", fontWeight: "600", textDecoration: "underline" }}>
+                  Full Size Guide →
+                </Link>
               </div>
+
+              {/* Saved Child Profile Quick Selectors */}
+              {user?.childProfiles && user.childProfiles.length > 0 && (
+                <div style={{ marginBottom: "12px", paddingBottom: "10px", borderBottom: "1px dashed rgba(0,0,0,0.1)" }}>
+                  <div style={{ fontSize: "11px", color: "var(--ink2)", marginBottom: "6px" }}>
+                    Select size for your child:
+                  </div>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
+                    {user.childProfiles.map((c) => (
+                      <button
+                        key={c.id}
+                        type="button"
+                        onClick={() => handleSelectChildProfile(c)}
+                        style={{
+                          background: "#fff",
+                          border: "1px solid var(--border)",
+                          borderRadius: "50px",
+                          padding: "4px 10px",
+                          fontSize: "11px",
+                          fontWeight: "600",
+                          cursor: "pointer",
+                          color: "var(--ink)",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "4px",
+                        }}
+                      >
+                        <span>👧 {c.name}</span>
+                        <span style={{ color: "var(--coral-d)", fontWeight: "700" }}>({c.size})</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Interactive Sizing Inputs */}
               <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
                 <input
-                  placeholder="Age (yrs)"
+                  placeholder="Age (0–14 yrs)"
                   type="number"
                   min="0"
                   max="14"
-                  style={{ flex: 1, padding: "8px 10px", border: "1.5px solid var(--border)", borderRadius: "var(--radius-sm)", fontSize: "13px", outline: "none", width: 0 }}
+                  step="0.5"
+                  style={{ flex: 1, padding: "8px 10px", border: "1.5px solid var(--border)", borderRadius: "var(--radius-sm)", fontSize: "13px", outline: "none", width: 0, background: "#fff" }}
                   value={calcAge}
                   onChange={(e) => setCalcAge(e.target.value)}
                 />
                 <input
                   placeholder="Height (cm)"
                   type="number"
-                  style={{ flex: 1, padding: "8px 10px", border: "1.5px solid var(--border)", borderRadius: "var(--radius-sm)", fontSize: "13px", outline: "none", width: 0 }}
+                  style={{ flex: 1, padding: "8px 10px", border: "1.5px solid var(--border)", borderRadius: "var(--radius-sm)", fontSize: "13px", outline: "none", width: 0, background: "#fff" }}
                   value={calcHeight}
                   onChange={(e) => setCalcHeight(e.target.value)}
                 />
                 <button
+                  type="button"
                   onClick={handleCalcSize}
                   style={{ background: "var(--teal)", color: "#fff", border: "none", borderRadius: "var(--radius-sm)", padding: "8px 14px", fontSize: "12px", fontWeight: "700", cursor: "pointer", whiteSpace: "nowrap" }}
                 >
-                  Get size
+                  Find Size
                 </button>
               </div>
+
               {calculatedSizeRec && (
-                <div id="size-rec" style={{ marginTop: "8px", fontSize: "12px", fontWeight: "700", color: "var(--teal-d)" }}>
-                  ✅ Recommended size: {calculatedSizeRec}
+                <div id="size-rec" style={{ marginTop: "10px", fontSize: "12px", fontWeight: "700", color: "var(--teal-d)", display: "flex", alignItems: "center", gap: "6px" }}>
+                  <span>✅ Recommended size:</span>
+                  <span style={{ background: "var(--teal)", color: "#fff", padding: "2px 8px", borderRadius: "4px" }}>
+                    {calculatedSizeRec}
+                  </span>
                 </div>
               )}
             </div>
@@ -327,8 +400,8 @@ export default function ProductClient({ product, completeLook }) {
               </div>
             </div>
             <button
-              onClick={() => showToast("💬 Opening WhatsApp consultation support...")}
-              style={{ background: "#25D366", color: "#fff", border: "none", borderRadius: "var(--radius-sm)", padding: "11px", fontSize: "13px", fontWeight: "700", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", width: "100%" }}
+              onClick={handleWhatsAppConsult}
+              style={{ background: "#25D366", color: "#fff", border: "none", borderRadius: "var(--radius-sm)", padding: "12px", fontSize: "13px", fontWeight: "700", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", width: "100%" }}
             >
               <span style={{ fontSize: "16px" }}>💬</span> Chat on WhatsApp — get size advice in 2 min
             </button>

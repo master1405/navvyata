@@ -4,6 +4,17 @@ import React, { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCart } from "@/app/context/CartContext";
 import Link from "next/link";
+import { INDIAN_STATES, getRecommendedSize } from "@/app/lib/constants";
+
+/**
+ * Account Dashboard & Auth Client Component
+ * Provides complete customer lifecycle management:
+ * 1. Mobile OTP authentication & Google sign-in fallback
+ * 2. Rewards ledger balance & redemption instructions
+ * 3. Child Profile Management (Add, Edit, Delete, Default assignment)
+ * 4. Saved Address Management (Add, Edit, Delete, Default assignment with strict Indian validation)
+ * 5. Order History with collapsible visual timeline tracking
+ */
 
 export default function AccountClient() {
   const router = useRouter();
@@ -18,7 +29,7 @@ export default function AccountClient() {
   } = useCart();
 
   // Login steps state
-  const [step, setStep] = useState("phone"); // "phone" or "otp"
+  const [step, setStep] = useState("phone"); // "phone" | "otp"
   const [phone, setPhone] = useState("");
   const [otpDigits, setOtpDigits] = useState(["", "", "", ""]);
   
@@ -27,15 +38,35 @@ export default function AccountClient() {
   const [ordersLoading, setOrdersLoading] = useState(false);
   const [expandedOrderId, setExpandedOrderId] = useState(null);
   
-  // Add child profile states
-  const [showChildForm, setShowChildForm] = useState(false);
+  // Child profile modal & form states
+  const [showChildModal, setShowChildModal] = useState(false);
+  const [editingChildId, setEditingChildId] = useState(null); // null = create new, number = edit
   const [childName, setChildName] = useState("");
   const [childAge, setChildAge] = useState("");
   const [childHeight, setChildHeight] = useState("");
+  const [childIsDefault, setChildIsDefault] = useState(false);
+  const [childSaving, setChildSaving] = useState(false);
+
+  // Address modal & form states
+  const [showAddressModal, setShowAddressModal] = useState(false);
+  const [editingAddressId, setEditingAddressId] = useState(null); // null = create new, number = edit
+  const [addrName, setAddrName] = useState("");
+  const [addrPhone, setAddrPhone] = useState("");
+  const [addrLine, setAddrLine] = useState("");
+  const [addrPincode, setAddrPincode] = useState("");
+  const [addrCity, setAddrCity] = useState("");
+  const [addrState, setAddrState] = useState("");
+  const [addrType, setAddrType] = useState("Home");
+  const [addrIsDefault, setAddrIsDefault] = useState(false);
+  const [addrErrors, setAddrErrors] = useState({});
+  const [addrSaving, setAddrSaving] = useState(false);
+
+  // Inline delete confirmation states (avoids native browser dialog freeze)
+  const [deleteConfirmTarget, setDeleteConfirmTarget] = useState(null); // { type: 'address' | 'child', id, title }
 
   const redirectPath = searchParams.get("redirect") || "";
 
-  // Fetch orders when user changes
+  // Fetch customer orders when authenticated
   useEffect(() => {
     if (user) {
       fetchOrders();
@@ -57,6 +88,9 @@ export default function AccountClient() {
     }
   };
 
+  // --------------------------------------------------------------------------
+  // AUTHENTICATION HANDLERS
+  // --------------------------------------------------------------------------
   const handleSendOTP = (e) => {
     e.preventDefault();
     if (!phone.trim() || phone.trim().length < 10) {
@@ -78,12 +112,10 @@ export default function AccountClient() {
 
     const success = await loginUser(phone, otp);
     if (success) {
-      // Clear inputs
       setPhone("");
       setOtpDigits(["", "", "", ""]);
       setStep("phone");
       
-      // Redirect if specified
       if (redirectPath) {
         router.push(redirectPath);
       }
@@ -96,56 +128,223 @@ export default function AccountClient() {
     newDigits[index] = val.substring(val.length - 1);
     setOtpDigits(newDigits);
 
-    // Focus next input automatically
     if (val && index < 3) {
       const nextInput = document.getElementById(`otp-${index + 1}`);
       nextInput?.focus();
     }
   };
 
-  const handleAddChild = async (e) => {
+  // --------------------------------------------------------------------------
+  // CHILD PROFILE CRUD HANDLERS
+  // --------------------------------------------------------------------------
+  const openAddChildModal = () => {
+    setEditingChildId(null);
+    setChildName("");
+    setChildAge("");
+    setChildHeight("");
+    setChildIsDefault(user.childProfiles?.length === 0);
+    setShowChildModal(true);
+  };
+
+  const openEditChildModal = (child) => {
+    setEditingChildId(child.id);
+    setChildName(child.name);
+    setChildAge(child.age.toString());
+    setChildHeight(child.height ? child.height.toString() : "");
+    setChildIsDefault(child.isDefault);
+    setShowChildModal(true);
+  };
+
+  const handleSaveChildProfile = async (e) => {
     e.preventDefault();
-    if (!childName.trim() || !childAge.trim()) {
-      showToast("⚠️ Please enter child's name and age");
+    if (!childName.trim()) {
+      showToast("⚠️ Please enter your child's name");
+      return;
+    }
+    if (!childAge.trim() || isNaN(childAge) || parseInt(childAge) < 0 || parseInt(childAge) > 16) {
+      showToast("⚠️ Please enter a valid age between 0 and 16 years");
       return;
     }
 
-    // Determine size category fallback based on age
-    let childSize = "3–4Y";
-    const age = parseInt(childAge);
-    if (age >= 11) childSize = "11–12Y";
-    else if (age >= 10) childSize = "10–11Y";
-    else if (age >= 7) childSize = "7–8Y";
-    else if (age >= 5) childSize = "5–6Y";
-    else if (age >= 4) childSize = "4–5Y";
-    else if (age >= 3) childSize = "3–4Y";
-    else if (age >= 1) childSize = "1–2Y";
-    else childSize = "0–12M";
+    setChildSaving(true);
+    // Automatically calculate recommended size using pediatric anthropometrics
+    const calculatedSize = getRecommendedSize(childAge, childHeight);
 
     try {
-      const res = await fetch("/api/user/child-profiles", {
-        method: "POST",
+      const isEditing = editingChildId !== null;
+      const endpoint = "/api/user/child-profiles";
+      const method = isEditing ? "PUT" : "POST";
+
+      const payload = {
+        name: childName.trim(),
+        age: parseInt(childAge),
+        height: childHeight ? parseFloat(childHeight) : null,
+        size: calculatedSize,
+        isDefault: childIsDefault,
+      };
+
+      if (isEditing) {
+        payload.id = editingChildId;
+      }
+
+      const res = await fetch(endpoint, {
+        method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: childName,
-          age: parseInt(childAge),
-          height: childHeight ? parseFloat(childHeight) : null,
-          size: childSize,
-        }),
+        body: JSON.stringify(payload),
       });
+
       const data = await res.json();
       if (res.ok && data.success) {
-        showToast("👶 Child profile added!");
+        showToast(isEditing ? "👶 Child profile updated!" : "👶 Child profile added!");
         await refreshUserProfile();
-        setChildName("");
-        setChildAge("");
-        setChildHeight("");
-        setShowChildForm(false);
+        setShowChildModal(false);
       } else {
-        showToast("❌ " + (data.error || "Failed to add profile"));
+        showToast("❌ " + (data.error || "Failed to save profile"));
       }
     } catch (err) {
-      showToast("❌ Error saving profile");
+      showToast("❌ Network error saving profile");
+    } finally {
+      setChildSaving(false);
+    }
+  };
+
+  const handleDeleteChildProfile = async (childId) => {
+    try {
+      const res = await fetch(`/api/user/child-profiles?id=${childId}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        showToast("🗑️ Child profile removed");
+        await refreshUserProfile();
+      } else {
+        showToast("❌ Failed to delete profile");
+      }
+    } catch (err) {
+      showToast("❌ Error deleting profile");
+    } finally {
+      setDeleteConfirmTarget(null);
+    }
+  };
+
+  // --------------------------------------------------------------------------
+  // ADDRESS CRUD HANDLERS
+  // --------------------------------------------------------------------------
+  const openAddAddressModal = () => {
+    setEditingAddressId(null);
+    setAddrName("");
+    setAddrPhone(user.phone || "");
+    setAddrLine("");
+    setAddrPincode("");
+    setAddrCity("");
+    setAddrState("");
+    setAddrType("Home");
+    setAddrIsDefault(user.addresses?.length === 0);
+    setAddrErrors({});
+    setShowAddressModal(true);
+  };
+
+  const openEditAddressModal = (addr) => {
+    setEditingAddressId(addr.id);
+    setAddrName(addr.name);
+    setAddrPhone(addr.phone);
+    setAddrLine(addr.address);
+    setAddrPincode(addr.pincode);
+    setAddrCity(addr.city);
+    setAddrState(addr.state);
+    setAddrType(addr.type);
+    setAddrIsDefault(addr.isDefault);
+    setAddrErrors({});
+    setShowAddressModal(true);
+  };
+
+  const validateAddressForm = () => {
+    const errs = {};
+    if (!addrName.trim() || addrName.trim().length < 3) {
+      errs.name = "Enter a valid full name (min 3 characters)";
+    }
+    if (!/^[6-9]\d{9}$/.test(addrPhone.trim())) {
+      errs.phone = "Enter a valid 10-digit Indian mobile number";
+    }
+    if (!addrLine.trim() || addrLine.trim().length < 5) {
+      errs.line = "Enter complete street address / building details";
+    }
+    if (!/^[1-9][0-9]{5}$/.test(addrPincode.trim())) {
+      errs.pincode = "Enter a valid 6-digit postal pincode";
+    }
+    if (!addrCity.trim() || addrCity.trim().length < 2) {
+      errs.city = "Enter valid city name";
+    }
+    if (!addrState.trim()) {
+      errs.state = "Select state / union territory";
+    }
+    setAddrErrors(errs);
+    return Object.keys(errs).length === 0;
+  };
+
+  const handleSaveAddress = async (e) => {
+    e.preventDefault();
+    if (!validateAddressForm()) {
+      showToast("⚠️ Please fix the errors highlighted in the form");
+      return;
+    }
+
+    setAddrSaving(true);
+    try {
+      const isEditing = editingAddressId !== null;
+      const endpoint = "/api/user/addresses";
+      const method = isEditing ? "PUT" : "POST";
+
+      const payload = {
+        name: addrName.trim(),
+        phone: addrPhone.trim(),
+        address: addrLine.trim(),
+        pincode: addrPincode.trim(),
+        city: addrCity.trim(),
+        state: addrState.trim(),
+        type: addrType,
+        isDefault: addrIsDefault,
+      };
+
+      if (isEditing) {
+        payload.id = editingAddressId;
+      }
+
+      const res = await fetch(endpoint, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        showToast(isEditing ? "✅ Address updated!" : "✅ Address saved!");
+        await refreshUserProfile();
+        setShowAddressModal(false);
+      } else {
+        showToast("❌ " + (data.error || "Failed to save address"));
+      }
+    } catch (err) {
+      showToast("❌ Network error saving address");
+    } finally {
+      setAddrSaving(false);
+    }
+  };
+
+  const handleDeleteAddress = async (addressId) => {
+    try {
+      const res = await fetch(`/api/user/addresses?id=${addressId}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        showToast("🗑️ Address removed");
+        await refreshUserProfile();
+      } else {
+        showToast("❌ Failed to delete address");
+      }
+    } catch (err) {
+      showToast("❌ Error deleting address");
+    } finally {
+      setDeleteConfirmTarget(null);
     }
   };
 
@@ -153,7 +352,9 @@ export default function AccountClient() {
     return <div style={{ textAlign: "center", padding: "80px" }}>Loading account profile...</div>;
   }
 
-  // RENDER LOGIN SCREEN
+  // --------------------------------------------------------------------------
+  // RENDER LOGIN SCREEN (IF GUEST)
+  // --------------------------------------------------------------------------
   if (!user) {
     return (
       <div style={{ maxWidth: "400px", margin: "0 auto", padding: "60px 20px", textAlign: "center" }} className="page-body">
@@ -245,10 +446,13 @@ export default function AccountClient() {
     );
   }
 
-  // RENDER LOGGED IN DASHBOARD
+  // --------------------------------------------------------------------------
+  // RENDER AUTHENTICATED CUSTOMER DASHBOARD
+  // --------------------------------------------------------------------------
   return (
     <div className="account-wrap page-body">
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
+      {/* Header Profile Summary */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px", flexWrap: "wrap", gap: "12px" }}>
         <div>
           <h2>Account Details</h2>
           <div style={{ color: "var(--ink3)", fontSize: "14px", marginTop: "4px" }}>📱 +91 {user.phone}</div>
@@ -258,6 +462,7 @@ export default function AccountClient() {
         </button>
       </div>
 
+      {/* Rewards Ledger Banner */}
       <Link href="/rewards" style={{ display: "block", background: "linear-gradient(120deg, var(--coral), #FF8E53)", borderRadius: "var(--radius-lg)", padding: "24px 20px", color: "#fff", textAlign: "center", marginBottom: "28px" }}>
         <div style={{ fontSize: "12px", opacity: 0.8, textTransform: "uppercase", letterSpacing: ".5px" }}>
           Your rewards balance
@@ -266,105 +471,400 @@ export default function AccountClient() {
         <div style={{ fontSize: "12px", opacity: 0.9 }}>Redeem coins in your cart to save ₹{user.coins * 0.1}!</div>
       </Link>
 
+      {/* 2-Column Grid: Kids Profiles & Delivery Addresses */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "24px" }}>
+        
+        {/* COLUMN 1: KIDS PROFILES */}
         <div>
-          <div style={{ fontSize: "15px", fontWeight: "800", color: "var(--ink)", marginBottom: "14px" }}>
-            Kids Profiles
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px" }}>
+            <div style={{ fontSize: "16px", fontWeight: "800", color: "var(--ink)" }}>
+              Kids Profiles ({user.childProfiles?.length || 0})
+            </div>
+            <button className="btn btn-outline btn-sm" onClick={openAddChildModal} style={{ padding: "6px 12px", fontSize: "12px" }}>
+              ＋ Add Child
+            </button>
           </div>
+
           {user.childProfiles?.map((child) => (
-            <div className="card" style={{ padding: "16px", display: "flex", alignItems: "center", gap: "12px", marginBottom: "10px", textAlign: "left" }} key={child.id}>
-              <div style={{ width: "44px", height: "44px", borderRadius: "50%", background: "var(--coral-l)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "20px" }}>
-                👧
-              </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 700, fontSize: "14px" }}>{child.name}</div>
-                <div style={{ fontSize: "12px", color: "var(--ink3)" }}>
-                  {child.age} years · Size: {child.size}
+            <div className="card" style={{ padding: "16px", marginBottom: "10px", textAlign: "left" }} key={child.id}>
+              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                <div style={{ width: "44px", height: "44px", borderRadius: "50%", background: "var(--coral-l)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "20px", flexShrink: 0 }}>
+                  👧
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    <span style={{ fontWeight: 700, fontSize: "14px" }}>{child.name}</span>
+                    {child.isDefault && <span className="pill p-c" style={{ fontSize: "10px", padding: "1px 6px" }}>Default</span>}
+                  </div>
+                  <div style={{ fontSize: "12px", color: "var(--ink3)", marginTop: "2px" }}>
+                    {child.age} yrs {child.height ? `· ${child.height} cm` : ""} · Size: <strong style={{ color: "var(--coral-d)" }}>{child.size}</strong>
+                  </div>
+                </div>
+                <div style={{ display: "flex", gap: "6px" }}>
+                  <button
+                    onClick={() => openEditChildModal(child)}
+                    style={{ background: "none", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", padding: "4px 8px", cursor: "pointer", fontSize: "12px", color: "var(--ink2)" }}
+                    title="Edit profile"
+                  >
+                    ✏️ Edit
+                  </button>
+                  <button
+                    onClick={() => setDeleteConfirmTarget({ type: "child", id: child.id, title: child.name })}
+                    style={{ background: "none", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", padding: "4px 8px", cursor: "pointer", fontSize: "12px", color: "#e53e3e" }}
+                    title="Delete profile"
+                  >
+                    🗑️
+                  </button>
                 </div>
               </div>
-              {child.isDefault && <span className="pill p-c">Active</span>}
             </div>
           ))}
 
-          {!showChildForm ? (
+          {(!user.childProfiles || user.childProfiles.length === 0) && (
             <div
-              onClick={() => setShowChildForm(true)}
+              onClick={openAddChildModal}
               style={{
                 border: "1.5px dashed var(--border)",
                 borderRadius: "var(--radius)",
-                padding: "16px",
+                padding: "20px",
                 cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-                justifyContent: "center",
+                textAlign: "center",
                 background: "#fff",
               }}
             >
-              <span style={{ color: "var(--coral)", fontSize: "18px" }}>＋</span>
-              <span style={{ fontSize: "13px", fontWeight: "700", color: "var(--coral)" }}>Add child profile</span>
+              <span style={{ color: "var(--coral)", fontSize: "20px", display: "block", marginBottom: "4px" }}>👶</span>
+              <span style={{ fontSize: "13px", fontWeight: "700", color: "var(--coral)" }}>+ Add your child's profile</span>
+              <div style={{ fontSize: "11px", color: "var(--ink3)", marginTop: "4px" }}>
+                Get automatic size recommendations tailored for growth
+              </div>
             </div>
-          ) : (
-            <form
-              onSubmit={handleAddChild}
-              style={{
-                background: "#fff",
-                border: "1.5px solid var(--border)",
-                borderRadius: "var(--radius)",
-                padding: "16px",
-                textAlign: "left",
-              }}
-            >
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "14px" }}>
-                <span style={{ fontSize: "13px", fontWeight: "900" }}>Add child profile</span>
-                <button
-                  onClick={() => setShowChildForm(false)}
-                  style={{ background: "none", border: "none", fontSize: "18px", cursor: "pointer", color: "var(--ink3)" }}
-                >
-                  ×
-                </button>
-              </div>
-              <div className="field">
-                <label>Child name</label>
-                <input className="inp" placeholder="e.g. Aanya" value={childName} onChange={(e) => setChildName(e.target.value)} />
-              </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-                <div className="field">
-                  <label>Age (yrs)</label>
-                  <input className="inp" type="number" min="0" max="14" placeholder="e.g. 5" value={childAge} onChange={(e) => setChildAge(e.target.value)} />
-                </div>
-                <div className="field">
-                  <label>Height (cm) - Optional</label>
-                  <input className="inp" type="number" placeholder="e.g. 110" value={childHeight} onChange={(e) => setChildHeight(e.target.value)} />
-                </div>
-              </div>
-              <button className="btn btn-primary btn-sm" type="submit" style={{ marginTop: "6px" }}>
-                Save profile
-              </button>
-            </form>
           )}
         </div>
 
+        {/* COLUMN 2: SAVED ADDRESSES */}
         <div>
-          <div style={{ fontSize: "15px", fontWeight: "800", color: "var(--ink)", marginBottom: "14px" }}>
-            Saved Addresses
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px" }}>
+            <div style={{ fontSize: "16px", fontWeight: "800", color: "var(--ink)" }}>
+              Saved Addresses ({user.addresses?.length || 0})
+            </div>
+            <button className="btn btn-outline btn-sm" onClick={openAddAddressModal} style={{ padding: "6px 12px", fontSize: "12px" }}>
+              ＋ Add Address
+            </button>
           </div>
+
           {user.addresses?.map((addr) => (
-            <div className="card" style={{ padding: "14px", textAlign: "left", marginBottom: "10px" }} key={addr.id}>
-              <div style={{ fontWeight: 700, color: "var(--coral-d)", fontSize: "13px", marginBottom: "4px" }}>
-                {addr.type === "Home" ? "🏠 Home" : addr.type === "Office" ? "🏢 Office" : "📍 Other"}{" "}
-                {addr.isDefault && <span className="pill p-c">Default</span>}
+            <div className="card" style={{ padding: "16px", textAlign: "left", marginBottom: "10px" }} key={addr.id}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+                <span style={{ fontWeight: 700, color: "var(--coral-d)", fontSize: "13px" }}>
+                  {addr.type === "Home" ? "🏠 Home" : addr.type === "Office" ? "🏢 Office" : "📍 Other"}{" "}
+                  {addr.isDefault && <span className="pill p-c" style={{ fontSize: "10px", padding: "1px 6px" }}>Default</span>}
+                </span>
+                <div style={{ display: "flex", gap: "6px" }}>
+                  <button
+                    onClick={() => openEditAddressModal(addr)}
+                    style={{ background: "none", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", padding: "4px 8px", cursor: "pointer", fontSize: "12px", color: "var(--ink2)" }}
+                  >
+                    ✏️ Edit
+                  </button>
+                  <button
+                    onClick={() => setDeleteConfirmTarget({ type: "address", id: addr.id, title: `${addr.type} (${addr.city})` })}
+                    style={{ background: "none", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", padding: "4px 8px", cursor: "pointer", fontSize: "12px", color: "#e53e3e" }}
+                  >
+                    🗑️
+                  </button>
+                </div>
               </div>
-              <div style={{ fontSize: "12px", color: "var(--ink2)", lineHeight: "1.6" }}>
-                {addr.name} · {addr.phone}
+              <div style={{ fontSize: "13px", color: "var(--ink2)", lineHeight: "1.6" }}>
+                <strong>{addr.name}</strong> · +91 {addr.phone}
                 <br />
-                {addr.address}, {addr.city} – {addr.pincode}
+                {addr.address}
+                <br />
+                {addr.city}, {addr.state} – <strong style={{ color: "var(--ink)" }}>{addr.pincode}</strong>
               </div>
             </div>
           ))}
+
+          {(!user.addresses || user.addresses.length === 0) && (
+            <div
+              onClick={openAddAddressModal}
+              style={{
+                border: "1.5px dashed var(--border)",
+                borderRadius: "var(--radius)",
+                padding: "20px",
+                cursor: "pointer",
+                textAlign: "center",
+                background: "#fff",
+              }}
+            >
+              <span style={{ color: "var(--coral)", fontSize: "20px", display: "block", marginBottom: "4px" }}>📍</span>
+              <span style={{ fontSize: "13px", fontWeight: "700", color: "var(--coral)" }}>+ Add delivery address</span>
+              <div style={{ fontSize: "11px", color: "var(--ink3)", marginTop: "4px" }}>
+                Speed up checkout with saved addresses
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
+      {/* MODAL: ADD / EDIT CHILD PROFILE */}
+      {showChildModal && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "20px" }}>
+          <div style={{ background: "#fff", borderRadius: "var(--radius)", padding: "24px", width: "100%", maxWidth: "440px", textAlign: "left", boxShadow: "0 10px 30px rgba(0,0,0,0.15)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "18px" }}>
+              <span style={{ fontSize: "16px", fontWeight: "800" }}>
+                {editingChildId ? "Edit Child Profile" : "Add Child Profile"}
+              </span>
+              <button onClick={() => setShowChildModal(false)} style={{ background: "none", border: "none", fontSize: "20px", cursor: "pointer", color: "var(--ink3)" }}>
+                ×
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveChildProfile}>
+              <div className="field">
+                <label>Child's Name *</label>
+                <input
+                  className="inp"
+                  placeholder="e.g. Aanya"
+                  value={childName}
+                  onChange={(e) => setChildName(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <div className="field">
+                  <label>Age (years) *</label>
+                  <input
+                    className="inp"
+                    type="number"
+                    min="0"
+                    max="16"
+                    placeholder="e.g. 5"
+                    value={childAge}
+                    onChange={(e) => setChildAge(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="field">
+                  <label>Height (cm) - Optional</label>
+                  <input
+                    className="inp"
+                    type="number"
+                    placeholder="e.g. 110"
+                    value={childHeight}
+                    onChange={(e) => setChildHeight(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              {childAge && (
+                <div style={{ background: "var(--coral-l)", padding: "10px 14px", borderRadius: "var(--radius-sm)", fontSize: "12px", color: "var(--coral-d)", marginBottom: "14px", fontWeight: "600" }}>
+                  💡 Auto-calculated size: {getRecommendedSize(childAge, childHeight)}
+                </div>
+              )}
+
+              <label style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", cursor: "pointer", marginBottom: "18px" }}>
+                <input
+                  type="checkbox"
+                  checked={childIsDefault}
+                  onChange={(e) => setChildIsDefault(e.target.checked)}
+                />
+                <span>Set as active profile for shopping recommendations</span>
+              </label>
+
+              <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end" }}>
+                <button type="button" className="btn btn-outline btn-sm" onClick={() => setShowChildModal(false)}>
+                  Cancel
+                </button>
+                <button type="submit" className="btn btn-primary btn-sm" disabled={childSaving}>
+                  {childSaving ? "Saving..." : "Save Profile"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: ADD / EDIT ADDRESS */}
+      {showAddressModal && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "20px" }}>
+          <div style={{ background: "#fff", borderRadius: "var(--radius)", padding: "24px", width: "100%", maxWidth: "500px", textAlign: "left", maxHeight: "90vh", overflowY: "auto", boxShadow: "0 10px 30px rgba(0,0,0,0.15)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "18px" }}>
+              <span style={{ fontSize: "16px", fontWeight: "800" }}>
+                {editingAddressId ? "Edit Delivery Address" : "Add Delivery Address"}
+              </span>
+              <button onClick={() => setShowAddressModal(false)} style={{ background: "none", border: "none", fontSize: "20px", cursor: "pointer", color: "var(--ink3)" }}>
+                ×
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveAddress}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <div className="field">
+                  <label>Full Name *</label>
+                  <input
+                    className={`inp ${addrErrors.name ? "err-border" : ""}`}
+                    placeholder="e.g. Priya Sharma"
+                    value={addrName}
+                    onChange={(e) => {
+                      setAddrName(e.target.value);
+                      if (addrErrors.name) setAddrErrors((prev) => ({ ...prev, name: null }));
+                    }}
+                  />
+                  {addrErrors.name && <div style={{ color: "#e53e3e", fontSize: "11px", marginTop: "3px" }}>{addrErrors.name}</div>}
+                </div>
+
+                <div className="field">
+                  <label>Mobile Number *</label>
+                  <input
+                    className={`inp ${addrErrors.phone ? "err-border" : ""}`}
+                    placeholder="10-digit mobile"
+                    maxLength="10"
+                    type="tel"
+                    value={addrPhone}
+                    onChange={(e) => {
+                      setAddrPhone(e.target.value.replace(/\D/g, ""));
+                      if (addrErrors.phone) setAddrErrors((prev) => ({ ...prev, phone: null }));
+                    }}
+                  />
+                  {addrErrors.phone && <div style={{ color: "#e53e3e", fontSize: "11px", marginTop: "3px" }}>{addrErrors.phone}</div>}
+                </div>
+              </div>
+
+              <div className="field">
+                <label>Street Address / Apartment *</label>
+                <input
+                  className={`inp ${addrErrors.line ? "err-border" : ""}`}
+                  placeholder="Flat, House No, Building, Street, Area"
+                  value={addrLine}
+                  onChange={(e) => {
+                    setAddrLine(e.target.value);
+                    if (addrErrors.line) setAddrErrors((prev) => ({ ...prev, line: null }));
+                  }}
+                />
+                {addrErrors.line && <div style={{ color: "#e53e3e", fontSize: "11px", marginTop: "3px" }}>{addrErrors.line}</div>}
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <div className="field">
+                  <label>Pincode *</label>
+                  <input
+                    className={`inp ${addrErrors.pincode ? "err-border" : ""}`}
+                    placeholder="6-digit PIN"
+                    maxLength="6"
+                    value={addrPincode}
+                    onChange={(e) => {
+                      setAddrPincode(e.target.value.replace(/\D/g, ""));
+                      if (addrErrors.pincode) setAddrErrors((prev) => ({ ...prev, pincode: null }));
+                    }}
+                  />
+                  {addrErrors.pincode && <div style={{ color: "#e53e3e", fontSize: "11px", marginTop: "3px" }}>{addrErrors.pincode}</div>}
+                </div>
+
+                <div className="field">
+                  <label>City *</label>
+                  <input
+                    className={`inp ${addrErrors.city ? "err-border" : ""}`}
+                    placeholder="e.g. Mumbai"
+                    value={addrCity}
+                    onChange={(e) => {
+                      setAddrCity(e.target.value);
+                      if (addrErrors.city) setAddrErrors((prev) => ({ ...prev, city: null }));
+                    }}
+                  />
+                  {addrErrors.city && <div style={{ color: "#e53e3e", fontSize: "11px", marginTop: "3px" }}>{addrErrors.city}</div>}
+                </div>
+              </div>
+
+              <div className="field">
+                <label>State / Union Territory *</label>
+                <select
+                  className={`inp ${addrErrors.state ? "err-border" : ""}`}
+                  value={addrState}
+                  onChange={(e) => {
+                    setAddrState(e.target.value);
+                    if (addrErrors.state) setAddrErrors((prev) => ({ ...prev, state: null }));
+                  }}
+                >
+                  <option value="">-- Select State / UT --</option>
+                  {INDIAN_STATES.map((st) => (
+                    <option key={st} value={st}>
+                      {st}
+                    </option>
+                  ))}
+                </select>
+                {addrErrors.state && <div style={{ color: "#e53e3e", fontSize: "11px", marginTop: "3px" }}>{addrErrors.state}</div>}
+              </div>
+
+              <div className="field">
+                <label>Address Type</label>
+                <div style={{ display: "flex", gap: "8px" }}>
+                  {["Home", "Office", "Other"].map((t) => (
+                    <div
+                      key={t}
+                      className={`chip ${addrType === t ? "on" : ""}`}
+                      onClick={() => setAddrType(t)}
+                    >
+                      {t === "Home" ? "🏠 Home" : t === "Office" ? "🏢 Office" : "📍 Other"}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <label style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", cursor: "pointer", marginBottom: "18px" }}>
+                <input
+                  type="checkbox"
+                  checked={addrIsDefault}
+                  onChange={(e) => setAddrIsDefault(e.target.checked)}
+                />
+                <span>Set as default shipping address</span>
+              </label>
+
+              <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end" }}>
+                <button type="button" className="btn btn-outline btn-sm" onClick={() => setShowAddressModal(false)}>
+                  Cancel
+                </button>
+                <button type="submit" className="btn btn-primary btn-sm" disabled={addrSaving}>
+                  {addrSaving ? "Saving..." : "Save Address"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: DELETE CONFIRMATION (REPLACES NATIVE BROWSER CONFIRM) */}
+      {deleteConfirmTarget && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1100, padding: "20px" }}>
+          <div style={{ background: "#fff", borderRadius: "var(--radius)", padding: "24px", maxWidth: "380px", textAlign: "center", boxShadow: "0 10px 30px rgba(0,0,0,0.2)" }}>
+            <div style={{ fontSize: "36px", marginBottom: "12px" }}>⚠️</div>
+            <div style={{ fontSize: "16px", fontWeight: "800", marginBottom: "6px" }}>Confirm Deletion</div>
+            <div style={{ fontSize: "13px", color: "var(--ink2)", marginBottom: "20px" }}>
+              Are you sure you want to delete <strong>"{deleteConfirmTarget.title}"</strong>? This action cannot be undone.
+            </div>
+            <div style={{ display: "flex", gap: "10px", justifyContent: "center" }}>
+              <button className="btn btn-outline btn-sm" onClick={() => setDeleteConfirmTarget(null)}>
+                Cancel
+              </button>
+              <button
+                className="btn btn-primary btn-sm"
+                style={{ background: "#e53e3e", borderColor: "#e53e3e" }}
+                onClick={() => {
+                  if (deleteConfirmTarget.type === "address") {
+                    handleDeleteAddress(deleteConfirmTarget.id);
+                  } else {
+                    handleDeleteChildProfile(deleteConfirmTarget.id);
+                  }
+                }}
+              >
+                Yes, Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ORDER HISTORY SECTION */}
       <div style={{ marginTop: "36px" }}>
         <div style={{ fontSize: "16px", fontWeight: "800", color: "var(--ink)", marginBottom: "18px" }}>
           Your Orders ({orders.length})

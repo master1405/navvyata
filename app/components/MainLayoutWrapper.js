@@ -1,9 +1,52 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, Suspense } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCart } from "@/app/context/CartContext";
+
+/**
+ * Top Navigation Links Subcomponent
+ * Reads searchParams under a Suspense boundary to isolate active tab styling
+ * for query parameters (/shop vs /shop?filter=new vs /shop?filter=sale).
+ */
+function NavLinksContent({ pathname }) {
+  const searchParams = useSearchParams();
+  const filter = searchParams.get("filter");
+  const category = searchParams.get("category");
+
+  const isHome = pathname === "/";
+  // Shop All is only active if on /shop without filter or category query params
+  const isShopAll = pathname === "/shop" && !filter && !category;
+  const isNewArrivals = pathname === "/shop" && filter === "new";
+  const isSale = pathname === "/shop" && filter === "sale";
+  const isBlog = pathname.startsWith("/blog");
+  const isAbout = pathname === "/about";
+
+  return (
+    <div className="nav-links">
+      <Link href="/" className={isHome ? "active" : ""}>Home</Link>
+      <Link href="/shop" className={isShopAll ? "active" : ""}>Shop all</Link>
+      <Link href="/shop?filter=new" className={isNewArrivals ? "active" : ""}>New arrivals</Link>
+      <Link href="/shop?filter=sale" className={isSale ? "active" : ""}>Sale</Link>
+      <Link href="/blog" className={isBlog ? "active" : ""}>Blog</Link>
+      <Link href="/about" className={isAbout ? "active" : ""}>About</Link>
+    </div>
+  );
+}
+
+function NavLinksFallback({ pathname }) {
+  return (
+    <div className="nav-links">
+      <Link href="/" className={pathname === "/" ? "active" : ""}>Home</Link>
+      <Link href="/shop" className={pathname === "/shop" ? "active" : ""}>Shop all</Link>
+      <Link href="/shop?filter=new">New arrivals</Link>
+      <Link href="/shop?filter=sale">Sale</Link>
+      <Link href="/blog" className={pathname.startsWith("/blog") ? "active" : ""}>Blog</Link>
+      <Link href="/about" className={pathname === "/about" ? "active" : ""}>About</Link>
+    </div>
+  );
+}
 
 export default function MainLayoutWrapper({ children }) {
   const pathname = usePathname();
@@ -19,6 +62,7 @@ export default function MainLayoutWrapper({ children }) {
     getCartTotal,
     updateCartQty,
     removeFromCart,
+    addToCart,
   } = useCart();
 
   const [timerText, setTimerText] = useState("02:14:33");
@@ -175,7 +219,7 @@ export default function MainLayoutWrapper({ children }) {
                       price: u.price,
                       bg: u.bg,
                     };
-                    const { addToCart } = useCart(); // fetch dynamic add context
+                    addToCart(mockProduct, "Standard", "Default");
                   }}
                 >
                   <div
@@ -219,14 +263,9 @@ export default function MainLayoutWrapper({ children }) {
                 navvy<em>ata</em>
               </Link>
               
-              <div className="nav-links">
-                <Link href="/" className={pathname === "/" ? "active" : ""}>Home</Link>
-                <Link href="/shop" className={pathname.startsWith("/shop") ? "active" : ""}>Shop all</Link>
-                <Link href="/shop?filter=new" className={pathname.includes("filter=new") ? "active" : ""}>New arrivals</Link>
-                <Link href="/shop?filter=sale" className={pathname.includes("filter=sale") ? "active" : ""}>Sale</Link>
-                <Link href="/blog" className={pathname.startsWith("/blog") ? "active" : ""}>Blog</Link>
-                <Link href="/about" className={pathname === "/about" ? "active" : ""}>About</Link>
-              </div>
+              <Suspense fallback={<NavLinksFallback pathname={pathname} />}>
+                <NavLinksContent pathname={pathname} />
+              </Suspense>
 
               <div className="nav-search-wrap">
                 <span className="sico">🔍</span>

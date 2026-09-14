@@ -49,26 +49,27 @@ export default async function Home() {
               </Link>
             </div>
           </div>
+          {/* Hero Category Highlights - Deep-linked to PLP category filters */}
           <div className="hero-visual">
-            <Link href="/shop" className="hero-card">
+            <Link href="/shop?category=tops" className="hero-card">
               <div style={{ fontSize: "44px", marginBottom: "10px" }}>👕</div>
               <div style={{ fontSize: "13px", fontWeight: "700", color: "var(--ink2)" }}>Graphic Tees</div>
               <div style={{ fontSize: "15px", fontWeight: "800", color: "var(--coral)", marginTop: "2px" }}>From ₹399</div>
             </Link>
-            <Link href="/shop" className="hero-card">
+            <Link href="/shop?category=dresses" className="hero-card">
               <div style={{ fontSize: "44px", marginBottom: "10px" }}>👗</div>
               <div style={{ fontSize: "13px", fontWeight: "700", color: "var(--ink2)" }}>Summer Dresses</div>
               <div style={{ fontSize: "15px", fontWeight: "800", color: "var(--coral)", marginTop: "2px" }}>From ₹699</div>
             </Link>
-            <Link href="/shop" className="hero-card">
+            <Link href="/shop?category=sets" className="hero-card">
               <div style={{ fontSize: "44px", marginBottom: "10px" }}>🚀</div>
               <div style={{ fontSize: "13px", fontWeight: "700", color: "var(--ink2)" }}>Play Sets</div>
               <div style={{ fontSize: "15px", fontWeight: "800", color: "var(--coral)", marginTop: "2px" }}>From ₹899</div>
             </Link>
-            <Link href="/shop" className="hero-card">
+            <Link href="/shop?category=bottoms" className="hero-card">
               <div style={{ fontSize: "44px", marginBottom: "10px" }}>👟</div>
-              <div style={{ fontSize: "13px", fontWeight: "700", color: "var(--ink2)" }}>Sneakers</div>
-              <div style={{ fontSize: "15px", fontWeight: "800", color: "var(--coral)", marginTop: "2px" }}>From ₹999</div>
+              <div style={{ fontSize: "13px", fontWeight: "700", color: "var(--ink2)" }}>Bottoms &amp; Shoes</div>
+              <div style={{ fontSize: "15px", fontWeight: "800", color: "var(--coral)", marginTop: "2px" }}>From ₹349</div>
             </Link>
           </div>
         </div>

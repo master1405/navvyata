@@ -9,6 +9,7 @@ export default async function ShopPage({ searchParams }) {
   const params = await searchParams;
   const filter = params.filter || "";
   const age = params.age || "";
+  const category = params.category || "";
 
   let products = [];
   try {
@@ -24,6 +25,7 @@ export default async function ShopPage({ searchParams }) {
       initialProducts={products}
       filterParam={filter}
       ageParam={age}
+      categoryParam={category}
     />
   );
 }

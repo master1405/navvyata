@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import ProductCard from "@/app/components/ProductCard";
 
-export default function ShopClient({ initialProducts, filterParam, ageParam }) {
+export default function ShopClient({ initialProducts, filterParam, ageParam, categoryParam }) {
   const [products] = useState(initialProducts);
 
   // Filter States
@@ -16,10 +16,10 @@ export default function ShopClient({ initialProducts, filterParam, ageParam }) {
   });
 
   const [selectedCategories, setSelectedCategories] = useState({
-    tops: false,
-    dresses: false,
-    bottoms: false,
-    sets: false,
+    tops: categoryParam === "tops",
+    dresses: categoryParam === "dresses",
+    bottoms: categoryParam === "bottoms",
+    sets: categoryParam === "sets",
   });
 
   const [selectedSizes, setSelectedSizes] = useState([]);
@@ -39,6 +39,15 @@ export default function ShopClient({ initialProducts, filterParam, ageParam }) {
       tweens: ageParam === "tweens",
     });
   }, [ageParam]);
+
+  useEffect(() => {
+    setSelectedCategories({
+      tops: categoryParam === "tops",
+      dresses: categoryParam === "dresses",
+      bottoms: categoryParam === "bottoms",
+      sets: categoryParam === "sets",
+    });
+  }, [categoryParam]);
 
   // Size pills metadata
   const sizesList = ["0M", "3M", "1Y", "2Y", "4Y", "6Y", "8Y", "10Y", "12Y"];
@@ -132,6 +141,17 @@ export default function ShopClient({ initialProducts, filterParam, ageParam }) {
     setIsFilterSheetOpen(false);
   };
 
+  // Dynamic catalog title based on active filter or deep-linked category
+  const plpTitle = useMemo(() => {
+    if (filterParam === "new") return "New Arrivals 🌟";
+    if (filterParam === "sale") return "Sale Items 🔥";
+    if (categoryParam === "tops") return "Graphic Tees & Tops 👕";
+    if (categoryParam === "dresses") return "Summer Dresses & Rompers 👗";
+    if (categoryParam === "sets") return "Play Sets & Combos 🚀";
+    if (categoryParam === "bottoms") return "Bottoms & Shorts 🩳";
+    return "All Products 👕";
+  }, [filterParam, categoryParam]);
+
   return (
     <div id="s-plp">
       {/* Header and Breadcrumbs */}
@@ -139,14 +159,10 @@ export default function ShopClient({ initialProducts, filterParam, ageParam }) {
         <div className="plp-head-inner">
           <div>
             <div className="breadcrumb">
-              <Link href="/">Home</Link> / All products
+              <Link href="/">Home</Link> / {categoryParam ? plpTitle : "All products"}
             </div>
             <div className="plp-title-text">
-              {filterParam === "new"
-                ? "New Arrivals 🌟"
-                : filterParam === "sale"
-                ? "Sale Items 🔥"
-                : "All Products 👕"}
+              {plpTitle}
             </div>
             <div className="plp-count">{filteredProducts.length} products</div>
           </div>
