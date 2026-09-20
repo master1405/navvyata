@@ -4,8 +4,22 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
 }
+
+// ==========================================
+// 1. SYSTEM & CONFIGURATION
+// ==========================================
+
+model StoreConfig {
+  key       String   @id // e.g. "cod_global_enabled"
+  value     String   // "true" or "false"
+  updatedAt DateTime @updatedAt
+}
+
+// ==========================================
+// 2. USER & AUTHENTICATION
+// ==========================================
 
 model User {
   id            Int            @id @default(autoincrement())
@@ -15,12 +29,14 @@ model User {
   addresses     UserAddress[]
   childProfiles ChildProfile[]
   orders        Order[]
+
+  @@index([phone])
 }
 
 model UserAddress {
   id        Int      @id @default(autoincrement())
   userId    Int
-  user      User     @relation(fields: [userId], references: [id])
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   name      String
   phone     String
   address   String
@@ -29,76 +45,100 @@ model UserAddress {
   state     String
   type      String   // "Home", "Office", "Other"
   isDefault Boolean  @default(false)
+
+  @@index([userId])
 }
 
 model ChildProfile {
   id        Int      @id @default(autoincrement())
   userId    Int
-  user      User     @relation(fields: [userId], references: [id])
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   name      String
   age       Int
   height    Float?
   size      String?
   isDefault Boolean  @default(false)
+
+  @@index([userId])
 }
 
+// ==========================================
+// 3. CATALOG & INVENTORY (WITH SOFT HOLD & COD)
+// ==========================================
+
 model Product {
-  id          Int                  @id @default(autoincrement())
-  emoji       String
-  name        String
-  ageRange    String
-  price       Int
-  oldPrice    Int?
-  bg          String
-  tag         String?
-  tagClass    String?
-  description String?
-  isFeatured  Boolean              @default(false)
-  isSale      Boolean              @default(false)
-  isNew       Boolean              @default(false)
-  sizes       ProductSizeStock[]
-  reviews     Review[]
-  orderItems  OrderItem[]
+  id             Int                @id @default(autoincrement())
+  emoji          String
+  name           String
+  ageRange       String
+  price          Int
+  oldPrice       Int?
+  bg             String
+  tag            String?
+  tagClass       String?
+  description    String?
+  isFeatured     Boolean            @default(false)
+  isSale         Boolean            @default(false)
+  isNew          Boolean            @default(false)
+  isCodAvailable Boolean            @default(true) // Per-product COD toggle
+  sizes          ProductSizeStock[]
+  reviews        Review[]
+  orderItems     OrderItem[]
 }
 
 model ProductSizeStock {
-  id        Int     @id @default(autoincrement())
-  productId Int
-  product   Product @relation(fields: [productId], references: [id])
-  size      String  // "3–4Y", "4–5Y", "5–6Y", etc.
-  stock     Int     @default(0)
+  id            Int     @id @default(autoincrement())
+  productId     Int
+  product       Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  size          String  // "3–4Y", "4–5Y", "5–6Y", etc.
+  stock         Int     @default(0) // Physical stock in warehouse
+  reservedStock Int     @default(0) // 15-minute soft held stock for pending checkout
+
+  @@unique([productId, size])
+  @@index([productId])
 }
 
 model Coupon {
-  id           Int     @id @default(autoincrement())
-  code         String  @unique
-  discountPct  Int     @default(0)
-  discountAmt  Int     @default(0)
-  minOrderVal  Int     @default(0)
-  active       Boolean @default(true)
+  id          Int      @id @default(autoincrement())
+  code        String   @unique
+  discountPct Int      @default(0)
+  discountAmt Int      @default(0)
+  minOrderVal Int      @default(0)
+  active      Boolean  @default(true)
 }
 
+// ==========================================
+// 4. ORDERS & PAYMENT GATEWAY TRANSACTIONS
+// ==========================================
+
 model Order {
-  id          String      @id // e.g. "NVY-2025-08471"
-  userId      Int
-  user        User        @relation(fields: [userId], references: [id])
-  createdAt   DateTime    @default(now())
-  status      String      @default("Confirmed") // "Confirmed", "Shipped", "Delivered", "Returned"
-  subtotal    Int
-  discount    Int
-  shipping    Int
-  total       Int
-  payMethod   String
-  addressName String
-  addressText String
-  estDelivery String
-  items       OrderItem[]
+  id             String               @id // e.g. "NVY-2025-08471"
+  userId         Int
+  user           User                 @relation(fields: [userId], references: [id])
+  createdAt      DateTime             @default(now())
+  status         String               @default("Pending") // "Pending", "Confirmed", "Shipped", "Delivered", "Cancelled"
+  paymentStatus  String               @default("UNPAID")   // "UNPAID", "PAID", "FAILED", "REFUNDED"
+  paymentGateway String               @default("PAYU")     // "PAYU", "COD"
+  holdExpiresAt  DateTime?            // 15-minute expiration timestamp for soft hold
+  subtotal       Int
+  discount       Int
+  shipping       Int
+  total          Int
+  payMethod      String               // "UPI", "Card", "COD", "Netbanking"
+  addressName    String
+  addressText    String
+  estDelivery    String
+  items          OrderItem[]
+  transactions   PaymentTransaction[]
+
+  @@index([userId])
+  @@index([status])
 }
 
 model OrderItem {
   id        Int     @id @default(autoincrement())
   orderId   String
-  order     Order   @relation(fields: [orderId], references: [id])
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
   productId Int
   product   Product @relation(fields: [productId], references: [id])
   name      String
@@ -108,18 +148,45 @@ model OrderItem {
   price     Int
   qty       Int
   bg        String
+
+  @@index([orderId])
 }
+
+model PaymentTransaction {
+  id           Int      @id @default(autoincrement())
+  orderId      String
+  order        Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  txnId        String   @unique // e.g. "NVY-2025-08471_T1"
+  gateway      String   @default("PAYU")
+  amount       Float
+  status       String   // "INITIATED", "SUCCESS", "FAILURE", "BOUNCED", "EXPIRED"
+  payuMoneyId  String?  // mihpayid
+  bankRefNum   String?  // Bank reference
+  paymentMode  String?  // "UPI", "CC", "DC", "NB"
+  errorMessage String?
+  rawResponse  String?  // Store full JSON dump
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([orderId])
+}
+
+// ==========================================
+// 5. REVIEWS, BLOG & ADMIN
+// ==========================================
 
 model Review {
   id        Int      @id @default(autoincrement())
   productId Int
-  product   Product  @relation(fields: [productId], references: [id])
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   userName  String
   avatarBg  String
   avatarFg  String
   rating    Int
   comment   String
   createdAt DateTime @default(now())
+
+  @@index([productId])
 }
 
 model BlogPost {
@@ -135,9 +202,8 @@ model BlogPost {
 model AdminUser {
   id        Int      @id @default(autoincrement())
   email     String   @unique
-  password  String   // Hashed password
+  password  String
   name      String
   role      String   // "Owner", "Manager", "Writer"
   createdAt DateTime @default(now())
 }
-

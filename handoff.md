@@ -6,7 +6,7 @@ This document serves as the permanent, single source of truth for the **Navvyata
 
 ## 🚀 1. Architecture Overview
 
-Navvyata is built as a full-stack Next.js application (App Router) powered by **SQLite** via `@prisma/adapter-better-sqlite3` and `@prisma/client`.
+Navvyata is built as a full-stack Next.js application (App Router) powered by **Supabase (Managed PostgreSQL)** via `@prisma/adapter-pg` and `@prisma/client`.
 
 ```
 navvyata/
@@ -157,17 +157,61 @@ Located in [app/admin/](file:///c:/Users/mashu/Downloads/navvyata/app/admin) and
 # 1. Install dependencies
 npm install
 
-# 2. Setup database schema & generate Prisma client
-npx prisma generate
-npx prisma db push
+# 2. Configure .env with Supabase credentials (see .env.example)
+# DATABASE_URL (Port 6543, Transaction pooler)
+# DIRECT_URL (Port 5432, Session pooler)
 
-# 3. Seed mock data (Products, coupons, blogs, admin team)
-node prisma/seed.js
-node prisma/seed-admin.js
+# 3. Setup database schema & generate Prisma client
+npm run db:generate
+npm run db:push
 
-# 4. Start local development server
+# 4. Seed catalog data & admin accounts
+npm run db:seed
+
+# 5. Start local development server
 npm run dev
 
-# 5. Validate production compilation
+# 6. Validate production compilation
 npm run build
+```
+
+---
+
+## ☁️ 9. AWS EC2 Production Deployment Runbook
+
+For deploying on an AWS EC2 instance (Ubuntu/Debian) running PM2:
+
+```bash
+# 1. SSH into EC2 instance
+ssh -i /path/to/key.pem ubuntu@<ec2-public-ip>
+
+# 2. Navigate to project root
+cd ~/navvyata
+
+# 3. Fetch and switch to the production feature branch
+git fetch origin
+git checkout feat/supabase-postgres-migration
+git pull origin feat/supabase-postgres-migration
+
+# 4. Configure .env on EC2 securely
+nano .env
+# Paste DATABASE_URL and DIRECT_URL (replace password)
+chmod 600 .env
+
+# 5. Install dependencies and generate client
+npm install
+npm run db:generate
+
+# 6. Push database schema & seed (if first time on Supabase)
+npm run db:push
+npm run db:seed
+
+# 7. Build optimized Next.js bundle
+npm run build
+
+# 8. Restart process manager
+pm2 restart navvyata || pm2 start npm --name "navvyata" -- start
+
+# 9. Verify deployment
+pm2 logs navvyata --lines 50
 ```
