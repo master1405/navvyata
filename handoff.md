@@ -215,3 +215,37 @@ pm2 restart navvyata || pm2 start npm --name "navvyata" -- start
 # 9. Verify deployment
 pm2 logs navvyata --lines 50
 ```
+
+---
+
+## 📜 10. Supabase Production Migration Log & Operational Notes
+
+### A. Architectural Rationale (Why PostgreSQL Replaced SQLite)
+* **Write Concurrency**: SQLite applies a database-wide file lock during write operations, causing `SQLITE_BUSY` crashes under concurrent checkout attempts. PostgreSQL uses fine-grained row-level locking (`SELECT ... FOR UPDATE`), supporting hundreds of concurrent shoppers.
+* **Payment Webhook Persistence**: Payment gateways (PayU) send asynchronous server-to-server callbacks and webhooks. An external, managed cloud database guarantees transactional persistence and prevents data loss.
+* **Soft Holds & Inventory Reservation**: Navvyata supports 15-minute cart holds (`reservedStock` in `ProductSizeStock` and `holdExpiresAt` in `Order`) executed atomically via `prisma.$transaction`.
+
+### B. Dual-URL Connection Architecture
+Supabase PostgreSQL provides two connection modes which are configured in `.env`:
+1. **Transaction Mode Pooler (`DATABASE_URL`, Port 6543)**:
+   * URL: `postgresql://postgres.[REF]:[PASSWORD]@aws-0-[REGION].pooler.supabase.com:6543/postgres?pgbouncer=true`
+   * Used by Next.js App Router server actions and API route queries.
+   * Supavisor connection pooling maintains a lightweight connection pool, preventing connection exhaustion under traffic spikes.
+2. **Session Mode Pooler (`DIRECT_URL`, Port 5432)**:
+   * URL: `postgresql://postgres.[REF]:[PASSWORD]@aws-0-[REGION].pooler.supabase.com:5432/postgres`
+   * Used by Prisma CLI (`npm run db:push`) for executing DDL schema modifications and table creations.
+   * **IPv4 Compatibility**: Supabase direct database hostnames (`db.[ref].supabase.co`) resolve exclusively to IPv6 addresses. Connecting via the Supabase pooler domain (`aws-0-[region].pooler.supabase.com`) provides full native IPv4 support across all cloud environments and ISPs.
+
+### C. AWS EC2 Operational Lessons & Best Practices
+1. **Memory & Swap on 1GB Instances (`t2.micro` / `t3.micro`)**:
+   * Next.js production builds (`npm run build`) with Turbopack compile 40+ static and dynamic routes, temporarily consuming ~1.2GB–1.5GB of RAM.
+   * A 2GB swap file (`sudo fallocate -l 2G /swapfile && sudo chmod 600 /swapfile && sudo mkswap /swapfile && sudo swapon /swapfile`) prevents Out-Of-Memory (OOM) kernel kills and terminal freezes.
+2. **EBS Disk Management**:
+   * AWS Free Tier includes up to **30 GB** of EBS storage. Expanding the root volume from the default 8 GB to 25 GB/30 GB via AWS Console eliminates `No space left on device` failures.
+3. **Directory Permissions in `/var/www/`**:
+   * System directories under `/var/www` default to `root:root`. Ensure the deployment user owns the workspace (`sudo chown -R $USER:$USER /var/www/navvyata` or `sudo chmod -R 777 /var/www/navvyata`) to allow Prisma to regenerate `/app/generated/prisma` and Next.js to write `.next` cache files without `EACCES` permission errors.
+4. **PM2 Lifecycle**:
+   * Check status: `pm2 status`
+   * Flush logs if disk space is tight: `pm2 flush`
+   * Auto-start on system reboot: `pm2 save && pm2 startup`
+
